@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import { requireRole } from '@/lib/api-auth';
 import Order from '@/models/Order';
-import { finalizeOrderPayment, mapOrder } from '@/lib/order-utils';
+import PaymentSession from '@/models/PaymentSession';
+import { createOrderFromData, finalizeOrderPayment, mapOrder } from '@/lib/order-utils';
 import { sendEmail, sendOrderConfirmationEmail } from '@/lib/email';
 import { notifySellersForNewOrder } from '@/lib/notifications';
 import { verifyPaymentSignature } from '@/lib/razorpay';
@@ -30,49 +31,57 @@ export async function POST(request) {
     }
 
     const isObjectId = mongoose.Types.ObjectId.isValid(orderId);
-    const order = await Order.findOne(
+    const session = await PaymentSession.findOne(
       isObjectId
         ? { _id: orderId, user: auth.user._id }
-        : { 'paymentDetails.razorpayOrderId': orderId, user: auth.user._id }
+        : { razorpayOrderId: orderId, user: auth.user._id }
     );
-    if (!order) {
-      return NextResponse.json({ success: false, message: 'Order not found.' }, { status: 404 });
+
+    if (!session) {
+      return NextResponse.json({ success: false, message: 'Payment session not found.' }, { status: 404 });
     }
 
-    if (order.paymentProvider !== 'razorpay') {
-      return NextResponse.json({ success: false, message: 'This endpoint verifies Razorpay payments only.' }, { status: 400 });
+    if (session.expiresAt && new Date(session.expiresAt).getTime() < Date.now() && session.status !== 'paid') {
+      session.status = 'expired';
+      await session.save();
+      return NextResponse.json({ success: false, message: 'Payment session expired. Please retry checkout.' }, { status: 410 });
     }
 
-    if (order.paymentStatus === 'failed') {
+    if (session.status === 'failed') {
       return NextResponse.json({ success: false, message: 'This payment attempt is already marked as failed.' }, { status: 409 });
     }
 
-    if (order.paymentStatus === 'paid') {
-      if (order.paymentDetails?.razorpayPaymentId && order.paymentDetails.razorpayPaymentId !== razorpay_payment_id) {
-        return NextResponse.json({ success: false, message: 'Order already paid with a different payment id.' }, { status: 409 });
+    if (session.status === 'paid') {
+      if (session.paymentId && session.paymentId !== razorpay_payment_id) {
+        return NextResponse.json({ success: false, message: 'Payment already verified with a different payment id.' }, { status: 409 });
+      }
+
+      const existingOrder = session.order ? await Order.findById(session.order).populate('user', 'name email role') : null;
+      if (!existingOrder) {
+        return NextResponse.json({ success: false, message: 'Payment is verified but order record is missing.' }, { status: 409 });
       }
 
       return NextResponse.json({
         success: true,
-        message: 'Payment already verified for this order.',
+        message: 'Payment already verified for this checkout session.',
         data: {
-          ...mapOrder(order, auth.user),
-          paymentId: order.paymentDetails?.razorpayPaymentId || razorpay_payment_id,
-          status: order.paymentStatus,
+          ...mapOrder(existingOrder, auth.user),
+          paymentId: existingOrder.paymentDetails?.razorpayPaymentId || razorpay_payment_id,
+          status: existingOrder.paymentStatus,
         },
       });
     }
 
-    if (order.paymentDetails?.razorpayOrderId && order.paymentDetails.razorpayOrderId !== razorpay_order_id) {
-      order.paymentStatus = 'failed';
-      order.paymentAttempts = Number(order.paymentAttempts || 0) + 1;
-      order.paymentFailureReason = 'Razorpay order id mismatch';
-      await order.save();
+    if (session.razorpayOrderId && session.razorpayOrderId !== razorpay_order_id) {
+      session.status = 'failed';
+      session.paymentAttempts = Number(session.paymentAttempts || 0) + 1;
+      session.paymentFailureReason = 'Razorpay order id mismatch';
+      await session.save();
       return NextResponse.json({ success: false, message: 'Invalid payment order reference.' }, { status: 400 });
     }
 
-    order.paymentAttempts = Number(order.paymentAttempts || 0) + 1;
-    await order.save();
+    session.paymentAttempts = Number(session.paymentAttempts || 0) + 1;
+    await session.save();
 
     const verification = verifyPaymentSignature({
       orderId: razorpay_order_id,
@@ -81,7 +90,7 @@ export async function POST(request) {
     });
 
     console.log('[Payment/Verify] Verification result:', {
-      orderId: String(order._id),
+      sessionId: String(session._id),
       razorpay_order_id,
       razorpay_payment_id,
       valid: verification.valid,
@@ -89,14 +98,30 @@ export async function POST(request) {
     });
 
     if (!verification.valid) {
-      order.paymentStatus = 'failed';
-      order.paymentFailureReason = 'Invalid Razorpay signature';
-      await order.save();
+      session.status = 'failed';
+      session.paymentFailureReason = 'Invalid Razorpay signature';
+      await session.save();
       return NextResponse.json({ success: false, message: 'Payment verification failed.' }, { status: 400 });
     }
 
+    const { order: createdOrder } = await createOrderFromData({
+      userId: auth.user._id,
+      items: session.items,
+      shippingAddress: session.shippingAddress,
+      amounts: {
+        subtotal: session.subtotal,
+        shippingFee: session.shippingFee,
+        totalAmount: session.totalAmount,
+      },
+      method: 'online',
+      paymentDetails: {
+        razorpayOrderId: session.razorpayOrderId,
+        mode: verification.mode,
+      },
+    });
+
     const populatedOrder = await finalizeOrderPayment({
-      order,
+      order: createdOrder,
       payment: {
         razorpay_order_id,
         razorpay_payment_id,
@@ -105,6 +130,13 @@ export async function POST(request) {
       verificationMode: verification.mode,
       isCOD: false,
     });
+
+    session.status = 'paid';
+    session.paymentId = razorpay_payment_id;
+    session.signature = razorpay_signature;
+    session.order = populatedOrder._id;
+    session.paymentFailureReason = '';
+    await session.save();
 
     let invoiceMeta = null;
     try {

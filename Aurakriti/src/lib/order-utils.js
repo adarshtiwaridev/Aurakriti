@@ -60,7 +60,7 @@ export async function loadCartForOrder(userId) {
   });
 }
 
-export async function createOrderFromCart({ userId, shippingAddress = {}, method = 'online' }) {
+export async function buildOrderDataFromCart({ userId, shippingAddress = {} }) {
   const cart = await loadCartForOrder(userId);
 
   if (!cart || cart.items.length === 0) {
@@ -96,30 +96,53 @@ export async function createOrderFromCart({ userId, shippingAddress = {}, method
 
   const shippingFee = subtotal > SHIPPING_THRESHOLD ? 0 : STANDARD_SHIPPING;
   const totalAmount = subtotal + shippingFee;
-  const isCOD = method === 'cod';
-
-  const order = await Order.create({
-    user: userId,
-    items: orderItems,
-    shippingAddress,
-    subtotal,
-    shippingFee,
-    totalAmount,
-    paymentStatus: 'created',
-    paymentProvider: isCOD ? 'cod' : 'razorpay',
-    paymentDetails: {
-      mode: isCOD ? 'cod' : 'test',
-    },
-  });
 
   return {
-    order,
+    items: orderItems,
+    shippingAddress,
     amounts: {
       subtotal,
       shippingFee,
       totalAmount,
     },
   };
+}
+
+export async function createOrderFromData({ userId, items, shippingAddress = {}, amounts, method = 'online', paymentDetails = {} }) {
+  const isCOD = method === 'cod';
+
+  const order = await Order.create({
+    user: userId,
+    items,
+    shippingAddress,
+    subtotal: amounts.subtotal,
+    shippingFee: amounts.shippingFee,
+    totalAmount: amounts.totalAmount,
+    paymentStatus: 'created',
+    paymentProvider: isCOD ? 'cod' : 'razorpay',
+    paymentDetails: {
+      mode: isCOD ? 'cod' : 'test',
+      ...paymentDetails,
+    },
+  });
+
+  return { order, amounts };
+}
+
+export async function createOrderFromCart({ userId, shippingAddress = {}, method = 'online' }) {
+  const cartOrderData = await buildOrderDataFromCart({ userId, shippingAddress });
+  const isCOD = method === 'cod';
+
+  return createOrderFromData({
+    userId,
+    items: cartOrderData.items,
+    shippingAddress: cartOrderData.shippingAddress,
+    amounts: cartOrderData.amounts,
+    method,
+    paymentDetails: {
+      mode: isCOD ? 'cod' : 'test',
+    },
+  });
 }
 
 export async function finalizeOrderPayment({ order, payment = {}, verificationMode = 'test', isCOD = false }) {

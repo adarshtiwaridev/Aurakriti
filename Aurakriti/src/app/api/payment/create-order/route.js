@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import { requireRole } from '@/lib/api-auth';
 import { createPaymentOrder } from '@/lib/razorpay';
-import { createOrderFromCart } from '@/lib/order-utils';
+import { buildOrderDataFromCart } from '@/lib/order-utils';
+import PaymentSession from '@/models/PaymentSession';
 
 export const runtime = 'nodejs';
 
@@ -19,32 +20,34 @@ export async function POST(request) {
 
     console.log('[Payment/CreateOrder] Request received for user:', String(auth.user._id));
 
-    const { order, amounts } = await createOrderFromCart({
+    const cartOrderData = await buildOrderDataFromCart({
       userId: auth.user._id,
       shippingAddress,
-      method: 'online',
     });
 
     const paymentOrder = await createPaymentOrder({
-      amount: amounts.totalAmount,
-      receipt: `eco-${order._id.toString().slice(-10)}`,
+      amount: cartOrderData.amounts.totalAmount,
+      receipt: `eco-${Date.now().toString().slice(-10)}`,
       notes: {
-        orderId: order._id.toString(),
         userId: auth.user._id.toString(),
       },
     });
 
-    order.paymentDetails = {
-      ...order.paymentDetails,
+    const session = await PaymentSession.create({
+      user: auth.user._id,
+      shippingAddress: cartOrderData.shippingAddress,
+      items: cartOrderData.items,
+      subtotal: cartOrderData.amounts.subtotal,
+      shippingFee: cartOrderData.amounts.shippingFee,
+      totalAmount: cartOrderData.amounts.totalAmount,
       razorpayOrderId: paymentOrder.id,
-      mode: paymentOrder.mode,
-    };
-    order.paymentStatus = 'created';
-    order.status = 'pending';
-    await order.save();
+      verificationMode: paymentOrder.mode,
+      status: 'created',
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+    });
 
     console.log('[Payment/CreateOrder] Razorpay order created:', {
-      orderId: String(order._id),
+      sessionId: String(session._id),
       razorpayOrderId: paymentOrder.id,
       amount: paymentOrder.amount,
       currency: paymentOrder.currency,
@@ -54,10 +57,10 @@ export async function POST(request) {
     return NextResponse.json({
       success: true,
       data: {
-        orderId: String(order._id),
+        orderId: String(session._id),
         paymentId: null,
-        status: order.paymentStatus,
-        amounts,
+        status: session.status,
+        amounts: cartOrderData.amounts,
         razorpay: paymentOrder,
       },
     });

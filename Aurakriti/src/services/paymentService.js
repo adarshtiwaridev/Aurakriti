@@ -1,4 +1,4 @@
-function loadRazorpayScript() {
+function loadScript(src) {
   return new Promise((resolve) => {
     if (typeof window === 'undefined') {
       resolve(false);
@@ -11,7 +11,7 @@ function loadRazorpayScript() {
     }
 
     const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.src = src;
     script.async = true;
     script.onload = () => resolve(true);
     script.onerror = () => resolve(false);
@@ -27,6 +27,25 @@ async function parseResponse(response) {
   }
 
   return payload.data;
+}
+
+async function markPaymentFailure(orderId, razorpayOrderId, reason) {
+  try {
+    await fetch('/api/payment/failure', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        orderId,
+        razorpay_order_id: razorpayOrderId,
+        reason,
+      }),
+    });
+  } catch {
+    // Ignore failure reporting errors to avoid masking checkout failures.
+  }
 }
 
 export async function createCheckout(shippingAddress, method) {
@@ -64,20 +83,20 @@ export async function processPayment({ checkoutData, customer }) {
     throw new Error('Invalid Razorpay order payload received from server.');
   }
 
-  const loaded = await loadRazorpayScript();
+  const loaded = await loadScript('https://checkout.razorpay.com/v1/checkout.js');
   if (!loaded || !window.Razorpay) {
     throw new Error('Unable to load Razorpay checkout.');
   }
 
   return new Promise((resolve, reject) => {
-    const instance = new window.Razorpay({
+    const options = {
       key: razorpayOrder.key,
       amount: razorpayOrder.amount,
       currency: razorpayOrder.currency,
-      name: 'EcoCommerce',
-      description: 'Secure checkout',
+      name: 'Aurakriti',
+      description: 'Jewellery Purchase',
       order_id: razorpayOrder.id,
-      handler: async (paymentResponse) => {
+      handler: async function (paymentResponse) {
         try {
           const order = await finalizeOrder(checkoutData.orderId, paymentResponse);
           resolve(order);
@@ -94,15 +113,21 @@ export async function processPayment({ checkoutData, customer }) {
         color: '#16a34a',
       },
       modal: {
-        ondismiss: () => reject(new Error('Payment was cancelled.')),
+        ondismiss: async () => {
+          await markPaymentFailure(checkoutData.orderId, razorpayOrder.id, 'Payment was cancelled by user');
+          reject(new Error('Payment was cancelled.'));
+        },
       },
-    });
+    };
 
-    instance.on('payment.failed', (response) => {
+    const rzp = new window.Razorpay(options);
+
+    rzp.on('payment.failed', async (response) => {
       const description = response?.error?.description || 'Payment failed at Razorpay.';
+      await markPaymentFailure(checkoutData.orderId, razorpayOrder.id, description);
       reject(new Error(description));
     });
 
-    instance.open();
+    rzp.open();
   });
 }

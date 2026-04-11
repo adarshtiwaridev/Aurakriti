@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import { requireRole } from '@/lib/api-auth';
 import User from '@/models/User';
-import { createPaymentOrder } from '@/lib/razorpay';
 import { createOrderFromCart } from '@/lib/order-utils';
 
 void User;
@@ -19,27 +18,19 @@ export async function POST(request) {
   const shippingAddress = body.shippingAddress ?? {};
   const isCOD = body.method === 'cod';
 
+  if (!isCOD) {
+    return NextResponse.json(
+      { success: false, message: 'Online payments must use /api/payment/create-order.' },
+      { status: 400 }
+    );
+  }
+
   try {
     const { order, amounts } = await createOrderFromCart({
       userId: auth.user._id,
       shippingAddress,
-      method: isCOD ? 'cod' : 'online',
+      method: 'cod',
     });
-
-    let razorpayData = null;
-    if (!isCOD) {
-      const paymentOrder = await createPaymentOrder({
-        amount: amounts.totalAmount,
-        receipt: `eco-${order._id.toString().slice(-10)}`,
-        notes: {
-          orderId: order._id.toString(),
-          userId: auth.user._id.toString(),
-        },
-      });
-      order.paymentDetails = { ...order.paymentDetails, razorpayOrderId: paymentOrder.id, mode: paymentOrder.mode };
-      await order.save();
-      razorpayData = paymentOrder;
-    }
 
     return NextResponse.json({
       success: true,
@@ -48,8 +39,8 @@ export async function POST(request) {
         paymentId: null,
         status: order.paymentStatus,
         amounts,
-        cod: isCOD,
-        razorpay: razorpayData,
+        cod: true,
+        razorpay: null,
       },
     });
   } catch (error) {
