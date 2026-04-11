@@ -239,7 +239,8 @@ export default function Navbar({ cartCount = 0, searchTerm, onSearch }) {
                       </div>
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-[#3e3228]">{product.title}</p>
-                        <p className="truncate text-xs text-[#7b6b5c]">{product.category} | Rs {Number(product.price || 0).toLocaleString('en-IN')}</p>
+                        <p className="truncate text-xs text-[#7b6b5c]">{product.category}</p>
+                        <p className="whitespace-nowrap text-xs font-semibold text-[#5b462d]">Rs {Number(product.price || 0).toLocaleString('en-IN')}</p>
                       </div>
                     </button>
                     <button

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { MessageCircle, Send, Sparkles, X } from 'lucide-react';
 
-const DEFAULT_PROMPTS = ['Best phone under 15000', 'Gaming laptop', 'Running shoes under 3000'];
+const DEFAULT_PROMPTS = ['Gold necklace under 5000', 'Best mangalsutra for wedding', 'Luxury watch for bride'];
 
 export default function FloatingChatbot() {
   const [open, setOpen] = useState(false);
