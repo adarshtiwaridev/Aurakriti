@@ -81,9 +81,14 @@ export default function ProductCard({ product, onAddToCart }) {
 
           <button
             onClick={() => onAddToCart(product)}
-            className="w-full inline-flex items-center justify-center rounded-full bg-green-600 px-6 py-3 text-sm font-bold uppercase tracking-[0.18em] text-white shadow-lg shadow-green-100 transition hover:bg-green-700"
+            disabled={product.isDemo}
+            className={`w-full inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-bold uppercase tracking-[0.18em] text-white shadow-lg transition ${
+              product.isDemo
+                ? 'bg-slate-400 cursor-not-allowed shadow-slate-200'
+                : 'bg-green-600 shadow-green-100 hover:bg-green-700'
+            }`}
           >
-            Add to Cart
+            {product.isDemo ? 'Demo Product' : 'Add to Cart'}
           </button>
           <Link
             href={`/products/${productId}`}
