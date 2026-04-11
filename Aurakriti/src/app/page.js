@@ -41,7 +41,7 @@ export default function HomePage() {
   const searchParams = useSearchParams();
   const dispatch = useDispatch();
   const { items: cartItems } = useCart();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, initialized } = useAuth();
   const compareItems = useSelector((state) => state.compare.items);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState(['All']);
@@ -67,6 +67,16 @@ export default function HomePage() {
         if (!active) return;
         setProducts(data.products ?? []);
         setCategories(['All', ...(data.categories ?? [])]);
+      } catch (error) {
+        // Fallback: load from local JSON - these are demo products
+        try {
+          const data = await import('@/app/data/products.json');
+          setProducts(data.products.map(p => ({ ...p, isDemo: true }))); // Mark as demo products
+          const uniqueCategories = [...new Set(data.products.map(p => p.category))];
+          setCategories(['All', ...uniqueCategories]);
+        } catch {
+          console.error('Failed to load products:', error);
+        }
       } finally {
         if (active) {
           setLoading(false);
@@ -142,6 +152,20 @@ export default function HomePage() {
   }, [activeCategory, products, searchTerm]);
 
   const handleAddToCart = async (product) => {
+    // Check if this is a demo product
+    if (product.isDemo) {
+      setToastMessage('Demo products cannot be added to cart. Please connect to database for full functionality.');
+      setTimeout(() => setToastMessage(''), 3000);
+      return;
+    }
+
+    // Wait for auth initialization
+    if (!initialized) {
+      setToastMessage('Please wait while we verify your account...');
+      setTimeout(() => setToastMessage(''), 2000);
+      return;
+    }
+
     if (!isAuthenticated) {
       router.push('/auth/login');
       return;

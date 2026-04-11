@@ -21,7 +21,7 @@ export default function ShopPage() {
   const router = useRouter();
   const dispatch = useDispatch();
   const { items: cartItems } = useCart();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, initialized } = useAuth();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState(['All']);
   const [activeCategory, setActiveCategory] = useState('All');
@@ -72,7 +72,7 @@ export default function ShopPage() {
       } catch (error) {
         try {
           const data = await import('@/app/data/products.json');
-          productCache = data.products;
+          productCache = data.products.map(p => ({ ...p, isDemo: true })); // Mark as demo products
           const uniqueCategories = ['All', ...[...new Set(data.products.map(p => p.category))]];
           categoryCache = uniqueCategories;
           setProducts(productCache);
@@ -146,6 +146,20 @@ export default function ShopPage() {
   }, [products, activeCategory, debouncedSearchTerm, sortBy, priceRange]);
 
   const handleAddToCart = useCallback(async (product) => {
+    // Check if this is a demo product
+    if (product.isDemo) {
+      setToastMessage('Demo products cannot be added to cart. Please connect to database for full functionality.');
+      setTimeout(() => setToastMessage(''), 3000);
+      return;
+    }
+
+    // Wait for auth initialization
+    if (!initialized) {
+      setToastMessage('Please wait while we verify your account...');
+      setTimeout(() => setToastMessage(''), 2000);
+      return;
+    }
+
     if (!isAuthenticated) {
       router.push('/auth/login');
       return;
@@ -165,7 +179,7 @@ export default function ShopPage() {
       setToastMessage(error.message || 'Failed to add product to cart');
     }
     setTimeout(() => setToastMessage(''), 2200);
-  }, [isAuthenticated, user, router, dispatch]);
+  }, [isAuthenticated, user, router, dispatch, initialized]);
 
   const cartQuantity = useMemo(() => 
     cartItems.reduce((total, item) => total + item.quantity, 0),

@@ -66,7 +66,7 @@ export default function ProductDetailsPage() {
   const router = useRouter();
   const dispatch = useDispatch();
   const { cartCount } = useCart();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, initialized } = useAuth();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -111,6 +111,18 @@ export default function ProductDetailsPage() {
   }, [productId]);
 
   const handleAddToCart = async () => {
+    // Check if this is a demo product
+    if (product?.isDemo) {
+      setError('Demo products cannot be added to cart. Please connect to database for full functionality.');
+      return;
+    }
+
+    // Wait for auth initialization
+    if (!initialized) {
+      setError('Please wait while we verify your account...');
+      return;
+    }
+
     if (!isAuthenticated) {
       router.push('/auth/login');
       return;
@@ -128,6 +140,14 @@ export default function ProductDetailsPage() {
       dispatch(setCart(cart.items ?? []));
     } catch (err) {
       setError(err.message || 'Failed to add product to cart');
+    } finally {
+      setAdding(false);
+    }
+  };
+    } finally {
+      setAdding(false);
+    }
+  };
     } finally {
       setAdding(false);
     }
@@ -203,10 +223,10 @@ export default function ProductDetailsPage() {
               <div className="mt-6 flex flex-wrap gap-3">
                 <button
                   onClick={handleAddToCart}
-                  disabled={adding || product.stock === 0}
+                  disabled={adding || product.stock === 0 || product?.isDemo}
                   className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {adding ? 'Adding...' : 'Add to Cart'}
+                  {adding ? 'Adding...' : product?.isDemo ? 'Demo Product' : 'Add to Cart'}
                 </button>
                 <button
                   type="button"
