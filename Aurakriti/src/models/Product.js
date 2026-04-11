@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { JEWELLERY_CATEGORIES } from '../constants/categories.js';
 
 const productSchema = new mongoose.Schema(
   {
@@ -26,6 +27,10 @@ const productSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Product category is required'],
       trim: true,
+      enum: {
+        values: JEWELLERY_CATEGORIES,
+        message: 'Category must be one of: ' + JEWELLERY_CATEGORIES.join(', ')
+      }
     },
 
     images: {
