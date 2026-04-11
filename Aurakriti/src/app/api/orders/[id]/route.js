@@ -5,6 +5,7 @@ import Order, { ORDER_STATUS_FLOW, ORDER_STATUS_VALUES } from '@/models/Order';
 import { sendOrderStatusEmail } from '@/lib/email';
 import { mapOrder } from '@/lib/order-utils';
 import { notifyUserOrderStatus } from '@/lib/notifications';
+import { generateAndStoreInvoice } from '@/lib/invoice';
 import mongoose from 'mongoose';
 
 const VALID_STATUSES = ORDER_STATUS_VALUES;
@@ -262,6 +263,27 @@ export async function PATCH(request, context) {
     await order.save();
 
     const populatedOrder = await Order.findById(order._id).populate('user', 'name email');
+
+    // Generate invoice as soon as order reaches confirmed/shipped and payment is successful.
+    if (
+      ['confirmed', 'shipped'].includes(status) &&
+      populatedOrder?.paymentStatus === 'paid' &&
+      !populatedOrder?.invoice?.url
+    ) {
+      try {
+        const invoice = await generateAndStoreInvoice(populatedOrder, populatedOrder.user);
+        populatedOrder.invoice = {
+          url: invoice.publicUrl,
+          path: invoice.absolutePath,
+          fileName: invoice.fileName,
+          generatedAt: new Date(),
+        };
+        await populatedOrder.save();
+      } catch (invoiceError) {
+        console.error('[Order] Invoice generation on status update failed:', invoiceError);
+      }
+    }
+
     const emailStatuses = ['confirmed', 'shipped', 'delivered', 'cancelled'];
     if (emailStatuses.includes(status) && populatedOrder?.user?.email) {
       sendOrderStatusEmail(populatedOrder, populatedOrder.user, status).catch((e) =>

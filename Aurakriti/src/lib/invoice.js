@@ -31,7 +31,7 @@ export async function generateInvoicePdfBuffer(order, user) {
     const paymentId = order.paymentDetails?.razorpayPaymentId || 'N/A';
     const provider = order.paymentProvider === 'cod' ? 'Cash on Delivery' : 'Razorpay';
 
-    doc.fontSize(20).text('EcoCommerce Invoice', { align: 'left' });
+    doc.fontSize(20).text('Aurakriti Invoice', { align: 'left' });
     doc.moveDown(0.2);
     doc.fontSize(10).fillColor('#4b5563').text(`Invoice Date: ${createdAt.toLocaleDateString('en-IN')}`);
     doc.text(`Order ID: ${order._id}`);
@@ -79,7 +79,7 @@ export async function generateInvoicePdfBuffer(order, user) {
 export async function saveInvoicePdf(order, pdfBuffer) {
   await fs.mkdir(INVOICE_DIR, { recursive: true });
 
-  const fileName = `invoice-${String(order._id)}.pdf`;
+  const fileName = `invoice_${String(order._id)}.pdf`;
   const absolutePath = path.join(INVOICE_DIR, fileName);
   await fs.writeFile(absolutePath, pdfBuffer);
 

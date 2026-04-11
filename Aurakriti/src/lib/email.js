@@ -5,7 +5,7 @@ const smtpPort = Number(process.env.SMTP_PORT?.trim() || 587);
 const emailUser = process.env.EMAIL_USER?.trim();
 const emailPass = process.env.EMAIL_PASS?.trim();
 const fromEmail = process.env.FROM_EMAIL?.trim() || emailUser;
-const fromName = process.env.FROM_NAME?.trim() || 'EcoCommerce';
+const fromName = process.env.FROM_NAME?.trim() || 'Aurakriti';
 const EMAIL_MAX_RETRIES = Number(process.env.EMAIL_MAX_RETRIES ?? 3);
 const EMAIL_RETRY_DELAY_MS = Number(process.env.EMAIL_RETRY_DELAY_MS ?? 1000);
 
@@ -163,7 +163,7 @@ export const sendOrderConfirmationEmail = async (order, user) => {
     <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#f8fafb;padding:24px;border-radius:16px">
       <div style="background:#16a34a;padding:24px;border-radius:12px;text-align:center;margin-bottom:24px">
         <h1 style="color:#fff;margin:0;font-size:22px">&#10003; Order Confirmed!</h1>
-        <p style="color:#dcfce7;margin:8px 0 0">Thank you for shopping with EcoCommerce</p>
+        <p style="color:#dcfce7;margin:8px 0 0">Thank you for shopping with Aurakriti</p>
       </div>
       <p style="color:#1e293b">Hi <strong>${user.name}</strong>,</p>
       <p style="color:#475569">Your order <strong>#${String(order._id).slice(-8).toUpperCase()}</strong> has been placed successfully.</p>
@@ -184,12 +184,12 @@ export const sendOrderConfirmationEmail = async (order, user) => {
       </table>
       <p style="color:#94a3b8;font-size:12px;margin-top:24px">Payment: ${order.paymentDetails?.mode === 'cod' ? 'Cash on Delivery' : 'Online Payment'}</p>
       ${invoiceUrl ? `<p style="margin-top:8px"><a href="${invoiceUrl}" style="color:#2563eb;text-decoration:none;font-weight:600">Download Invoice PDF</a></p>` : ''}
-      <p style="color:#94a3b8;font-size:12px">EcoCommerce &mdash; Sustainable shopping, delivered.</p>
+      <p style="color:#94a3b8;font-size:12px">Aurakriti &mdash; Luxury jewellery, beautifully delivered.</p>
     </div>`;
 
   return await sendEmail(
     user.email,
-    `Order Confirmed #${String(order._id).slice(-8).toUpperCase()} — EcoCommerce`,
+    `Order Confirmed #${String(order._id).slice(-8).toUpperCase()} — Aurakriti`,
     html,
     attachment.length ? { attachments: attachment } : {}
   );
@@ -305,10 +305,21 @@ export const sendOrderStatusEmail = async (order, user, newStatus) => {
   const trackingLinkHtml = tracking.trackingUrl
     ? `<p style="margin:8px 0 0"><a href="${tracking.trackingUrl}" style="color:#2563eb;text-decoration:none">Track your shipment</a></p>`
     : '';
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  const invoiceUrl = order.invoice?.url ? `${appUrl}${order.invoice.url}` : '';
+  const invoiceAttachment = order.invoice?.path
+    ? [
+        {
+          filename: order.invoice?.fileName || `invoice-${order._id}.pdf`,
+          path: order.invoice.path,
+          contentType: 'application/pdf',
+        },
+      ]
+    : [];
 
   const html = `
     <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#f8fafb;padding:24px;border-radius:16px">
-      <h2 style="color:#1e293b">Order Update — EcoCommerce</h2>
+      <h2 style="color:#1e293b">Order Update — Aurakriti</h2>
       <p style="color:#475569">Hi <strong>${user.name}</strong>, your order <strong>#${orderCode}</strong> status has been updated.</p>
       <div style="background:#dcfce7;border-left:4px solid #16a34a;padding:16px;border-radius:8px;margin:16px 0">
         <p style="margin:0;color:#15803d;font-size:18px;font-weight:bold">${label}</p>
@@ -331,8 +342,14 @@ export const sendOrderStatusEmail = async (order, user, newStatus) => {
         <p style="margin:0"><strong>Carrier:</strong> ${tracking.carrier || 'Not available yet'}</p>
         ${trackingLinkHtml}
       </div>
-      <p style="color:#94a3b8;font-size:12px">EcoCommerce &mdash; Thank you for shopping with us.</p>
+      ${invoiceUrl ? `<p style="margin:14px 0 0"><a href="${invoiceUrl}" style="color:#2563eb;text-decoration:none;font-weight:600">Download Invoice PDF</a></p>` : ''}
+      <p style="color:#94a3b8;font-size:12px">Aurakriti &mdash; Thank you for choosing us.</p>
     </div>`;
 
-  return await sendEmail(user.email, `Order ${label} #${orderCode} — EcoCommerce`, html);
+  return await sendEmail(
+    user.email,
+    `Order ${label} #${orderCode} — Aurakriti`,
+    html,
+    invoiceAttachment.length ? { attachments: invoiceAttachment } : {}
+  );
 };

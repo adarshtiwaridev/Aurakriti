@@ -217,3 +217,5 @@ export async function POST(request) {
       { success: false, message: 'Failed to get recommendations.' },
       { status: 500 }
     );
+  }
+}

@@ -45,3 +45,16 @@ export async function getOrderById(orderId) {
 
   return parseResponse(response);
 }
+
+export async function generateInvoiceForOrder(orderId) {
+  const response = await fetch('/api/invoice/generate', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify({ orderId }),
+  });
+
+  return parseResponse(response);
+}
