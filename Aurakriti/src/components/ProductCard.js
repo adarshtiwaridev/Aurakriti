@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -29,27 +30,45 @@ export default function ProductCard({ product, onAddToCart }) {
 
   const safeName = product.name || product.title;
   const safeImage = product.image || product.images?.[0] || 'https://via.placeholder.com/800x800?text=Product';
+  const secondImage = product.images?.[1] || null;
 
   return (
     <>
-      <article className="group relative flex flex-col overflow-hidden rounded-4xl border border-slate-200 bg-white transition duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-green-50">
-      <div className="relative overflow-hidden border-b border-slate-200">
-        <Link href={`/products/${productId}`} onClick={handleProductClick}>
-          <img src={safeImage} alt={safeName} className="h-64 w-full object-cover transition-transform duration-500 group-hover:scale-105" />
-        </Link>
-        <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-slate-700 shadow-sm">
-          {product.category}
-        </span>
+      <article className="group relative flex flex-col overflow-hidden rounded-[2rem] border border-[#ebdfd0] bg-white shadow-[0_26px_70px_-44px_rgba(147,112,43,0.25)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_28px_90px_-44px_rgba(147,112,43,0.28)]">
+        <div className="relative overflow-hidden border-b border-[#f1e5d4] bg-[#fff7ed]">
+          <Link href={`/products/${productId}`} onClick={handleProductClick}>
+            <div className="relative h-72 w-full overflow-hidden transition duration-700 group-hover:scale-[1.02]">
+              <Image
+                src={safeImage}
+                alt={safeName}
+                fill
+                sizes="(max-width: 768px) 100vw, 320px"
+                className="object-cover transition duration-700"
+              />
+              {secondImage ? (
+                <Image
+                  src={secondImage}
+                  alt={`${safeName} alternate`}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 320px"
+                  className="absolute inset-0 object-cover opacity-0 transition duration-700 group-hover:opacity-100"
+                />
+              ) : null}
+            </div>
+          </Link>
+          <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[10px] font-black uppercase tracking-[0.23em] text-[#6e5642] shadow-sm">
+            {product.category}
+          </span>
         {/* Compare toggle badge */}
         <button
           onClick={toggleCompare}
           title={isInCompare ? 'Remove from compare' : compareFull ? 'Max 4 products' : 'Add to compare'}
-          className={`absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-xs font-black shadow-md transition-all ${
+          className={`absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-[#e7dbc8] bg-white text-[11px] font-black shadow-sm transition-all ${
             isInCompare
-              ? 'bg-green-600 text-white'
+              ? 'bg-[#c9a14a] text-white border-transparent'
               : compareFull
-              ? 'cursor-not-allowed bg-slate-200 text-slate-400'
-              : 'bg-white text-slate-600 hover:bg-green-50 hover:text-green-600'
+              ? 'cursor-not-allowed bg-[#f5efe5] text-[#b8a78b]'
+              : 'text-[#6f5c4a] hover:bg-[#fff4e6] hover:text-[#c9a14a]'
           }`}
         >
           {isInCompare ? '✓' : '⇄'}
@@ -58,7 +77,7 @@ export default function ProductCard({ product, onAddToCart }) {
         <button
           type="button"
           onClick={() => setShowQuickView(true)}
-          className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-slate-900/85 px-4 py-2 text-xs font-bold uppercase tracking-[0.15em] text-white opacity-0 transition duration-300 group-hover:opacity-100"
+          className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-[#3d3024]/90 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-white opacity-0 transition duration-300 group-hover:opacity-100"
         >
           Quick View
         </button>
@@ -66,26 +85,26 @@ export default function ProductCard({ product, onAddToCart }) {
 
       <div className="flex flex-1 flex-col p-6">
         <div className="mb-4 flex items-center justify-between gap-3">
-          <Link href={`/products/${productId}`} onClick={handleProductClick} className="text-xl font-bold text-slate-900 hover:text-green-700">
+          <Link href={`/products/${productId}`} onClick={handleProductClick} className="text-xl font-semibold text-[#3c2f25] transition hover:text-[#c9a14a]">
             {safeName}
           </Link>
-          <p className="text-lg font-black text-green-600">₹{product.price}</p>
+          <p className="text-lg font-black text-[#c9a14a]">₹{product.price}</p>
         </div>
-        <p className="text-sm leading-6 text-slate-600 line-clamp-2">{product.description}</p>
+        <p className="text-sm leading-6 text-[#6b5546] line-clamp-2">{product.description}</p>
 
-        <div className="mt-auto">
+        <div className="mt-auto space-y-3">
           {/* Compare label */}
           {isInCompare && (
-            <p className="mb-2 text-center text-xs font-semibold text-green-600">Added to compare</p>
+            <p className="text-center text-xs font-semibold uppercase tracking-[0.24em] text-[#8f765d]">Added to compare</p>
           )}
 
           <button
             onClick={() => onAddToCart(product)}
             disabled={product.isDemo}
-            className={`w-full inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-bold uppercase tracking-[0.18em] text-white shadow-lg transition ${
+            className={`w-full inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-white shadow-[0_20px_45px_-25px_rgba(201,161,74,0.45)] transition ${
               product.isDemo
-                ? 'bg-slate-400 cursor-not-allowed shadow-slate-200'
-                : 'bg-green-600 shadow-green-100 hover:bg-green-700'
+                ? 'bg-[#d9cab7] cursor-not-allowed shadow-none'
+                : 'bg-[#c9a14a] hover:bg-[#d4af37]'
             }`}
           >
             {product.isDemo ? 'Demo Product' : 'Add to Cart'}
@@ -93,7 +112,7 @@ export default function ProductCard({ product, onAddToCart }) {
           <Link
             href={`/products/${productId}`}
             onClick={handleProductClick}
-            className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-slate-200 px-6 py-3 text-sm font-bold uppercase tracking-[0.18em] text-slate-700 transition hover:bg-slate-50"
+            className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-[#f0e4d4] bg-[#fff8ee] px-6 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-[#5c4736] transition hover:border-[#c9a14a] hover:bg-[#fff4e2]"
           >
             View Details
           </Link>

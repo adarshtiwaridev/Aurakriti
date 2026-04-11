@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ShoppingCart, UserCircle, SearchIcon, Menu, LogOut, User, X, Bell, Grid3X3, ChevronDown } from 'lucide-react';
+import { ShoppingCart, UserCircle, SearchIcon, Menu, LogOut, User, X, Bell } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useDispatch } from 'react-redux';
 import { logout } from '@/redux/slices/authSlice';
@@ -18,15 +18,14 @@ import {
 export default function Navbar({ cartCount = 0, searchTerm, onSearch }) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [inputValue, setInputValue] = useState(searchTerm ?? '');
   const [suggestions, setSuggestions] = useState([]);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
-  const [categories, setCategories] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifs, setShowNotifs] = useState(false);
   const [notifLoading, setNotifLoading] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const { isAuthenticated, user, loading } = useAuth();
   const router = useRouter();
   const dispatch = useDispatch();
@@ -37,21 +36,12 @@ export default function Navbar({ cartCount = 0, searchTerm, onSearch }) {
     setInputValue(searchTerm ?? '');
   }, [searchTerm]);
 
-  // Load categories once for nav dropdown
+  // Track page scroll to keep the navigation softly elevated.
   useEffect(() => {
-    let active = true;
-    async function fetchCategories() {
-      try {
-        const res = await fetch('/api/category', { credentials: 'include', cache: 'no-store' });
-        const payload = await res.json();
-        if (!active || !payload.success) return;
-        setCategories(payload.data?.categories ?? []);
-      } catch {
-        // ignore category fetch failures; nav still works
-      }
-    }
-    fetchCategories();
-    return () => { active = false; };
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   // Poll notifications for authenticated users; this acts as real-time fallback.
@@ -134,11 +124,6 @@ export default function Navbar({ cartCount = 0, searchTerm, onSearch }) {
     window.dispatchEvent(new CustomEvent('eco:open-chatbot', { detail: { query } }));
   };
 
-  const openCategory = (categoryName) => {
-    setCategoriesOpen(false);
-    router.push(`/?category=${encodeURIComponent(categoryName)}`);
-  };
-
   const handleNotificationClick = async (notification) => {
     try {
       if (!notification.isRead) {
@@ -194,77 +179,39 @@ export default function Navbar({ cartCount = 0, searchTerm, onSearch }) {
   };
 
   return (
-    <header className="fixed top-0 z-50 w-full border-b border-slate-100 bg-white/95 backdrop-blur-md shadow-sm">
+    <header className={`fixed top-0 z-50 w-full border-b transition-all duration-300 ${scrolled ? 'bg-white/95 shadow-[0_24px_60px_-30px_rgba(147,112,43,0.18)] backdrop-blur-xl' : 'bg-white/80 shadow-sm backdrop-blur-md'}`}>
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         
         {/* LEFT: Logo & Nav Links */}
         <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-green-600 text-white shadow-lg shadow-green-200 transition-transform group-hover:scale-105">
-              <span className="font-bold text-xl">E</span>
+          <Link href="/" className="flex items-center gap-3 transition-transform duration-300 hover:scale-[1.01]">
+            <div className="flex h-11 w-11 items-center justify-center rounded-full border border-[#d4af37]/30 bg-[#fff9f0]/95 text-[#5e4b3c] shadow-[0_15px_40px_-25px_rgba(147,112,43,0.35)]">
+              <span className="luxury-serif text-lg font-semibold">A</span>
             </div>
             <div className="hidden flex-col sm:flex">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 leading-none">Eco</span>
-              <span className="text-sm font-black text-slate-800 leading-none">Commerce</span>
+              <span className="luxury-serif text-xs uppercase tracking-[0.45em] text-[#7e6c59]">Aurakriti</span>
+              <span className="luxury-serif text-lg font-semibold tracking-[0.12em] text-[#3d2f24]">Bridal Jewellery</span>
             </div>
           </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden items-center gap-6 md:flex">
-            {['Home', 'About', 'Contact'].map((item) => (
+            {['Home', 'Shop', 'About', 'Contact'].map((item) => (
               <Link
                 key={item}
                 href={item === 'Home' ? '/' : `/${item.toLowerCase()}`}
-                className="text-sm font-semibold text-slate-600 hover:text-green-600 transition-colors"
+                className="text-sm font-semibold text-[#5a4a3c] transition-colors duration-300 hover:text-[#c9a14a] hover:underline hover:underline-offset-8 hover:text-opacity-90"
               >
                 {item}
               </Link>
             ))}
-
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setCategoriesOpen((prev) => !prev)}
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 transition hover:border-green-200 hover:bg-green-50"
-              >
-                <Grid3X3 size={14} />
-                Categories
-                <ChevronDown size={14} className={`transition-transform ${categoriesOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              <AnimatePresence>
-                {categoriesOpen ? (
-                  <motion.div
-                    initial={{ opacity: 0, y: -8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute left-0 top-12 z-50 w-72 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl"
-                  >
-                    <div className="max-h-80 overflow-y-auto pr-1">
-                      {categories.map((category) => (
-                        <button
-                          key={category.slug || category.name}
-                          type="button"
-                          onClick={() => openCategory(category.name)}
-                          className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-slate-50"
-                        >
-                          <span>{category.name}</span>
-                          <span className="text-xs text-slate-400">{category.count}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </motion.div>
-                ) : null}
-              </AnimatePresence>
-            </div>
           </nav>
         </div>
 
         {/* CENTER: Search Bar */}
         <div className="flex-1 px-4 sm:px-8 hidden lg:block">
           <div className="relative mx-auto max-w-md">
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8b7a61]" size={16} />
             <input
               type="text"
               value={inputValue}
@@ -274,31 +221,31 @@ export default function Navbar({ cartCount = 0, searchTerm, onSearch }) {
                   setSuggestionsOpen(true);
                 }
               }}
-              placeholder="Search products..."
-              className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm outline-none transition-all focus:border-green-500 focus:bg-white focus:ring-4 focus:ring-green-50"
+              placeholder="Search elegant designs"
+              className="h-11 w-full rounded-3xl border border-[#e7dccf] bg-white/90 pl-12 pr-4 text-sm text-[#4c3f32] outline-none transition-all duration-300 focus:border-[#c9a14a] focus:bg-white focus:ring-4 focus:ring-[#d4af3740]"
             />
 
             {suggestionsOpen && suggestions.length ? (
-              <div className="absolute left-0 right-0 top-12 z-50 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+              <div className="absolute left-0 right-0 top-14 z-50 overflow-hidden rounded-3xl border border-[#ebdfcd] bg-white shadow-[0_20px_50px_-35px_rgba(110,72,26,0.25)]">
                 {suggestions.map((product) => (
-                  <div key={product.id} className="flex items-center justify-between gap-3 border-b border-slate-100 px-3 py-3 last:border-b-0">
+                  <div key={product.id} className="flex items-center justify-between gap-3 border-b border-[#f2e9da] px-3 py-3 last:border-b-0">
                     <button
                       type="button"
                       onClick={() => openSuggestion(product.id)}
                       className="flex min-w-0 flex-1 items-center gap-3 text-left"
                     >
-                      <div className="h-10 w-10 overflow-hidden rounded-lg bg-slate-100">
+                      <div className="h-11 w-11 overflow-hidden rounded-2xl bg-[#f8f1e7]">
                         {product.image ? <img src={product.image} alt={product.title} className="h-full w-full object-cover" /> : null}
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-slate-900">{product.title}</p>
-                        <p className="truncate text-xs text-slate-500">{product.category} | Rs {Number(product.price || 0).toLocaleString('en-IN')}</p>
+                        <p className="truncate text-sm font-semibold text-[#3e3228]">{product.title}</p>
+                        <p className="truncate text-xs text-[#7b6b5c]">{product.category} | Rs {Number(product.price || 0).toLocaleString('en-IN')}</p>
                       </div>
                     </button>
                     <button
                       type="button"
                       onClick={() => openChatbot(product.title)}
-                      className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700"
+                      className="rounded-full border border-[#e8d9c1] bg-[#fff8ef] px-3 py-1 text-[11px] font-semibold text-[#8b6a34]"
                     >
                       Ask AI
                     </button>
@@ -315,12 +262,12 @@ export default function Navbar({ cartCount = 0, searchTerm, onSearch }) {
           {canUseCart && (
             <Link
               href="/user/cart"
-              className="group relative flex h-10 w-10 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100 transition-colors"
+              className="group relative flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-[#5d4b36] shadow-sm transition-colors duration-300 hover:bg-[#fff6e6]"
               title="Shopping Cart"
             >
-              <ShoppingCart size={22} className="group-hover:text-green-600" />
+              <ShoppingCart size={22} className="group-hover:text-[#c9a14a]" />
               {showCartCount && (
-                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-green-600 text-[11px] font-bold text-white">
+                <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#c9a14a] text-[11px] font-bold text-white shadow-lg">
                   {cartCount}
                 </span>
               )}
@@ -462,7 +409,7 @@ export default function Navbar({ cartCount = 0, searchTerm, onSearch }) {
             <div className="flex items-center gap-2">
               <Link
                 href="/auth/login"
-                className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700 transition-colors shadow-md shadow-green-100"
+                className="inline-flex items-center justify-center rounded-full bg-[#c9a14a] px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-[#c9a14a]/20 transition hover:bg-[#d4af37]"
               >
                 Login
               </Link>
@@ -481,37 +428,20 @@ export default function Navbar({ cartCount = 0, searchTerm, onSearch }) {
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="border-t border-slate-100 bg-white md:hidden animate-in fade-in duration-200">
+        <div className="border-t border-[#f0e6d8] bg-white md:hidden animate-in fade-in duration-200">
           <div className="space-y-1 px-4 py-3">
-            <Link href="/" className="block rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-colors">
+            <Link href="/" className="block rounded-3xl px-3 py-2 text-sm font-semibold text-[#5a4b3d] transition hover:bg-[#fff4e6]">
               Home
             </Link>
-            <Link href="/about" className="block rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-colors">
+            <Link href="/shop" className="block rounded-3xl px-3 py-2 text-sm font-semibold text-[#5a4b3d] transition hover:bg-[#fff4e6]">
+              Shop
+            </Link>
+            <Link href="/about" className="block rounded-3xl px-3 py-2 text-sm font-semibold text-[#5a4b3d] transition hover:bg-[#fff4e6]">
               About
             </Link>
-            <Link href="/contact" className="block rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-colors">
+            <Link href="/contact" className="block rounded-3xl px-3 py-2 text-sm font-semibold text-[#5a4b3d] transition hover:bg-[#fff4e6]">
               Contact
             </Link>
-            {categories.length ? (
-              <div className="pt-3">
-                <p className="px-3 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Categories</p>
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  {categories.slice(0, 8).map((category) => (
-                    <button
-                      key={category.slug || category.name}
-                      type="button"
-                      onClick={() => {
-                        setMobileMenuOpen(false);
-                        openCategory(category.name);
-                      }}
-                      className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-xs font-semibold text-slate-700"
-                    >
-                      {category.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
           </div>
         </div>
       )}

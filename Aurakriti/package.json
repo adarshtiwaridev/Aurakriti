@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "seed:products": "node scripts/seed-products.mjs"
+    "seed:products": "node scripts/seed-products.mjs",
+    "migrate:categories": "node scripts/migrate-categories.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
