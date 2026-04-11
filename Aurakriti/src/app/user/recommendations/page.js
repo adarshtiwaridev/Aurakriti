@@ -6,10 +6,14 @@ import Navbar from '@/components/ecommerce/Navbar';
 import { useCart } from '@/hooks/useCart';
 
 const SUGGESTIONS = [
-  'Best phone under 15000',
-  'Gaming laptop',
-  'Running shoes under 3000',
-  'Men clothing for winter',
+  'Gold necklace for wedding',
+  'Diamond ring for proposal',
+  'Bridal jewellery set',
+  'Silver anklets for women',
+  'Traditional jhumka earrings',
+  'Minimalist gold chain',
+  'Luxury jewellery under 50000',
+  'Daily wear jewellery for women',
 ];
 
 export default function RecommendationsPage() {
