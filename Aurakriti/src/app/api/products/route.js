@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import connectDB from '@/lib/db';
 import { PRODUCT_CATEGORIES } from '@/lib/catalog';
 import { requireRole } from '@/lib/api-auth';
-import Product from '@/models/Product';
-import User from '@/models/User';
-import { sendNewProductLaunchEmail } from '@/lib/email';
-import { notifyUsersForNewProduct } from '@/lib/notifications';
+import fs from 'fs';
+import path from 'path';
 
 const productSchema = z.object({
   title: z.string().trim().min(2),
@@ -18,9 +15,9 @@ const productSchema = z.object({
 });
 
 const mapProduct = (product) => ({
-  id: String(product._id),
-  title: product.title,
-  name: product.title,
+  id: product.id,
+  title: product.name,
+  name: product.name,
   description: product.description,
   price: product.price,
   category: product.category,
@@ -28,22 +25,15 @@ const mapProduct = (product) => ({
   image: product.images?.[0] ?? '',
   stock: product.stock,
   rating: product.rating ?? 0,
-  tags: product.tags ?? [],
-  sellerId: String(product.seller?._id ?? product.seller),
-  seller: product.seller?._id
-    ? {
-        id: String(product.seller._id),
-        name: product.seller.name,
-        email: product.seller.email,
-      }
-    : null,
+  tags: [],
+  sellerId: null,
+  seller: null,
   createdAt: product.createdAt,
-  updatedAt: product.updatedAt,
+  updatedAt: product.createdAt,
+  isFeatured: product.isFeatured,
 });
 
 export async function GET(request) {
-  await connectDB();
-
   const { searchParams } = new URL(request.url);
   const page = Number(searchParams.get('page') ?? 1);
   const limit = Math.min(Number(searchParams.get('limit') ?? 12), 50);
@@ -52,115 +42,60 @@ export async function GET(request) {
   const seller = searchParams.get('seller');
   const mine = searchParams.get('mine') === 'true';
 
-  let query = { isActive: true };
-  let authenticatedUser = null;
+  // Read products from JSON file
+  const filePath = path.join(process.cwd(), 'src/app/data/products.json');
+  const rawData = fs.readFileSync(filePath, 'utf8');
+  const jsonData = JSON.parse(rawData);
+  let products = jsonData.products || [];
 
-  if (mine) {
-    const auth = await requireRole(request, ['seller', 'admin']);
-    if (auth.error) {
-      return auth.error;
-    }
-
-    authenticatedUser = auth.user;
-    query = authenticatedUser.role === 'admin' ? query : { ...query, seller: authenticatedUser._id };
-  }
-
+  // Apply filters
   if (category && category !== 'All') {
-    query.category = category;
-  }
-
-  if (seller) {
-    query.seller = seller;
+    products = products.filter(p => p.category === category);
   }
 
   if (search?.trim()) {
-    query.$or = [
-      { title: { $regex: search.trim(), $options: 'i' } },
-      { description: { $regex: search.trim(), $options: 'i' } },
-      { category: { $regex: search.trim(), $options: 'i' } },
-    ];
+    const searchLower = search.trim().toLowerCase();
+    products = products.filter(p =>
+      p.name.toLowerCase().includes(searchLower) ||
+      p.description.toLowerCase().includes(searchLower) ||
+      p.category.toLowerCase().includes(searchLower)
+    );
   }
 
+  // For mine, since no auth in JSON, return empty if requested
+  if (mine) {
+    products = [];
+  }
+
+  // Sort by createdAt desc
+  products.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  const total = products.length;
   const skip = Math.max(0, (page - 1) * limit);
+  const paginatedProducts = products.slice(skip, skip + limit);
 
-  const [products, total, categoriesFromDb] = await Promise.all([
-    Product.find(query)
-      .populate('seller', 'name email role')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean(),
-    Product.countDocuments(query),
-    Product.distinct('category', { isActive: true }),
-  ]);
-
-  const dynamicCategories = (categoriesFromDb || [])
-    .filter(Boolean)
-    .sort((a, b) => a.localeCompare(b));
+  // Get categories from products
+  const categoriesFromData = [...new Set(products.map(p => p.category))].sort();
 
   return NextResponse.json({
     success: true,
     data: {
-      products: products.map(mapProduct),
-      categories: dynamicCategories.length ? dynamicCategories : PRODUCT_CATEGORIES,
+      products: paginatedProducts.map(mapProduct),
+      categories: categoriesFromData.length ? categoriesFromData : PRODUCT_CATEGORIES,
       pagination: {
         page,
         limit,
         total,
         pages: Math.ceil(total / limit),
       },
-      scope: mine ? (authenticatedUser?.role === 'admin' ? 'admin' : 'seller') : 'public',
+      scope: mine ? 'seller' : 'public',
     },
   });
 }
 
 export async function POST(request) {
-  const auth = await requireRole(request, ['seller', 'admin']);
-  if (auth.error) {
-    return auth.error;
-  }
-
-  await connectDB();
-
-  const parsed = productSchema.safeParse(await request.json());
-  if (!parsed.success) {
-    return NextResponse.json(
-      { success: false, message: 'Invalid product data.', errors: parsed.error.flatten() },
-      { status: 400 }
-    );
-  }
-
-  const product = await Product.create({
-    ...parsed.data,
-    seller: auth.user._id,
-  });
-
-  const populatedProduct = await Product.findById(product._id).populate('seller', 'name email role');
-
-  // Fire-and-forget: send launch notification to all active users
-  (async () => {
-    try {
-      const users = await User.find({ isVerified: true, role: 'user' })
-        .select('_id email name')
-        .limit(2000)
-        .lean();
-      if (users.length) {
-        await Promise.all([
-          sendNewProductLaunchEmail(populatedProduct, users),
-          notifyUsersForNewProduct(populatedProduct, users),
-        ]);
-      }
-    } catch (error) {
-      console.error('[Products] Product launch email dispatch failed:', error.message);
-    }
-  })();
-
   return NextResponse.json(
-    {
-      success: true,
-      message: 'Product created successfully.',
-      data: mapProduct(populatedProduct),
-    },
-    { status: 201 }
+    { success: false, message: 'Products are read-only from JSON file.' },
+    { status: 403 }
   );
 }

@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
-import connectDB from '@/lib/db';
 import { requireRole } from '@/lib/api-auth';
-import Product from '@/models/Product';
-import Cart from '@/models/Cart';
-import Order from '@/models/Order';
+import fs from 'fs';
+import path from 'path';
 import { PRODUCT_CATEGORIES } from '@/lib/catalog';
 
 const STOP_WORDS = new Set([
@@ -12,13 +10,13 @@ const STOP_WORDS = new Set([
 ]);
 
 const mapProduct = (product) => ({
-  id: String(product._id),
-  title: product.title,
+  id: product.id,
+  title: product.name,
   description: product.description,
   price: product.price,
   category: product.category,
   rating: product.rating ?? 0,
-  tags: product.tags ?? [],
+  tags: [],
   images: product.images ?? [],
   image: product.images?.[0] ?? '',
   stock: product.stock,
@@ -45,14 +43,22 @@ function parseCategory(query) {
     return matched;
   }
 
-  if (normalized.includes('phone') || normalized.includes('laptop') || normalized.includes('gaming')) {
-    return 'Electronics';
+  // Jewellery-specific category mappings
+  if (normalized.includes('choker') || normalized.includes('neck piece') || normalized.includes('collar')) {
+    return 'choker';
   }
-  if (normalized.includes('shoe') || normalized.includes('sneaker')) {
-    return 'Footwear';
+  if (normalized.includes('necklace') || normalized.includes('pendant') || normalized.includes('neck')) {
+    return 'necklace';
   }
-  if (normalized.includes('cloth') || normalized.includes('shirt') || normalized.includes('dress') || normalized.includes('jeans')) {
-    return 'Men Clothing';
+  if (normalized.includes('mangalsutra') || normalized.includes('mangal') || normalized.includes('bridal') || normalized.includes('wedding')) {
+    return 'mangalsutra';
+  }
+  if (normalized.includes('watch') || normalized.includes('timepiece') || normalized.includes('wrist')) {
+    return 'watch';
+  }
+
+  if (normalized.includes('gold') || normalized.includes('jewellery') || normalized.includes('jewelry')) {
+    return null; // keep general jewellery search without forcing a category
   }
 
   return null;
@@ -69,7 +75,6 @@ function parseKeywords(query) {
 function scoreProduct(product, context) {
   const title = (product.title || '').toLowerCase();
   const description = (product.description || '').toLowerCase();
-  const tags = (product.tags || []).map((tag) => String(tag).toLowerCase());
 
   let score = 0;
 
@@ -79,9 +84,6 @@ function scoreProduct(product, context) {
     }
     if (description.includes(keyword)) {
       score += 4;
-    }
-    if (tags.some((tag) => tag.includes(keyword))) {
-      score += 5;
     }
   }
 
@@ -97,14 +99,6 @@ function scoreProduct(product, context) {
     } else {
       score -= 12;
     }
-  }
-
-  if (context.preferenceCategories.has(product.category)) {
-    score += 7;
-  }
-
-  if (context.cartCategories.has(product.category)) {
-    score += 4;
   }
 
   score += Number(product.rating || 0) * 3;
@@ -127,9 +121,6 @@ function buildReason(product, context) {
   if ((product.rating || 0) >= 4) {
     reasons.push(`Highly rated (${Number(product.rating).toFixed(1)})`);
   }
-  if (context.preferenceCategories.has(product.category)) {
-    reasons.push('Based on your previous orders');
-  }
   return reasons.slice(0, 3);
 }
 
@@ -140,8 +131,6 @@ export async function POST(request) {
       return auth.error;
     }
 
-    await connectDB();
-
     const body = await request.json();
     const query = String(body.query || '').trim();
 
@@ -149,69 +138,47 @@ export async function POST(request) {
       return NextResponse.json({ success: false, message: 'Query is required.' }, { status: 400 });
     }
 
-    const [orders, cart] = await Promise.all([
-      Order.find({ user: auth.user._id }).sort({ createdAt: -1 }).limit(25).lean(),
-      Cart.findOne({ user: auth.user._id }).populate('items.product').lean(),
-    ]);
+    // Read products from JSON file
+    const filePath = path.join(process.cwd(), 'src/app/data/products.json');
+    const rawData = fs.readFileSync(filePath, 'utf8');
+    const jsonData = JSON.parse(rawData);
+    let candidates = jsonData.products || [];
 
-    const preferenceCategories = new Set();
-    for (const order of orders) {
-      for (const item of order.items || []) {
-        if (item.category) {
-          preferenceCategories.add(item.category);
-        }
-      }
-    }
-
-    const cartCategories = new Set();
-    for (const item of cart?.items || []) {
-      if (item.product?.category) {
-        cartCategories.add(item.product.category);
-      }
-    }
+    // Filter active and in stock
+    candidates = candidates.filter(p => p.stock > 0);
 
     const budget = parseBudget(query);
     const category = parseCategory(query);
     const keywords = parseKeywords(query);
 
-    const mongoFilter = { isActive: true, stock: { $gt: 0 } };
+    // Apply filters
     if (category) {
-      mongoFilter.category = category;
+      candidates = candidates.filter(p => p.category === category);
     }
     if (budget !== null) {
-      mongoFilter.price = { $lte: budget };
+      candidates = candidates.filter(p => p.price <= budget);
     }
 
-    const orConditions = [];
-    for (const keyword of keywords.slice(0, 6)) {
-      const regex = { $regex: keyword, $options: 'i' };
-      orConditions.push({ title: regex });
-      orConditions.push({ description: regex });
-      orConditions.push({ tags: regex });
+    // Keyword search
+    if (keywords.length) {
+      candidates = candidates.filter(p => {
+        const title = p.name.toLowerCase();
+        const desc = p.description.toLowerCase();
+        return keywords.some(kw => title.includes(kw) || desc.includes(kw));
+      });
     }
 
-    if (orConditions.length) {
-      mongoFilter.$or = orConditions;
-    }
-
-    let candidates = await Product.find(mongoFilter)
-      .limit(120)
-      .sort({ rating: -1, createdAt: -1 })
-      .lean();
-
+    // If no matches, show all
     if (!candidates.length) {
-      candidates = await Product.find({ isActive: true, stock: { $gt: 0 } })
-        .limit(120)
-        .sort({ rating: -1, createdAt: -1 })
-        .lean();
+      candidates = jsonData.products.filter(p => p.stock > 0);
     }
 
     const context = {
       budget,
       category,
       keywords,
-      preferenceCategories,
-      cartCategories,
+      preferenceCategories: new Set(),
+      cartCategories: new Set(),
     };
 
     const ranked = candidates
@@ -245,7 +212,8 @@ export async function POST(request) {
       },
     });
   } catch (error) {
-    console.error('POST /api/recommendations/chat failed:', error);
-    return NextResponse.json({ success: false, message: 'Failed to generate recommendations.' }, { status: 500 });
-  }
-}
+    console.error('[Chat Recommendations] Error:', error);
+    return NextResponse.json(
+      { success: false, message: 'Failed to get recommendations.' },
+      { status: 500 }
+    );

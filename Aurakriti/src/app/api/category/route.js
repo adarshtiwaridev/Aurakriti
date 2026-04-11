@@ -4,16 +4,10 @@ import Product from '@/models/Product';
 import { PRODUCT_CATEGORIES } from '@/lib/catalog';
 
 const CATEGORY_ICONS = {
-  'Men Clothing': 'shirt',
-  'Women Clothing': 'sparkles',
-  'Kids Clothing': 'baby',
-  Electronics: 'cpu',
-  Footwear: 'footprints',
-  Accessories: 'gem',
-  'Home Decor': 'house',
-  Beauty: 'heart',
-  Sports: 'dumbbell',
-  Grocery: 'shopping-bag',
+  choker: 'gem',
+  necklace: 'sparkles',
+  mangalsutra: 'heart',
+  watch: 'clock',
 };
 
 export async function GET() {

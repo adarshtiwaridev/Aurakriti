@@ -63,10 +63,10 @@ async function run() {
   const hashed = await bcrypt.hash("Seller@123", 12);
 
   const seller = await User.findOneAndUpdate(
-    { email: "seller@ecocommerce.com" },
+    { email: "seller@aurakriti.com" },
     {
       $set: {
-        name: "Eco Seller",
+        name: "Aurakriti Seller",
         password: hashed,
         role: "seller",
         isVerified: true,
@@ -75,59 +75,50 @@ async function run() {
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
 
-  const sampleProducts = [
-    {
-      name: "Bamboo Toothbrush",
-      description: "Eco-friendly toothbrush made with biodegradable bamboo.",
-      price: 99,
-      category: "Personal Care",
-      images: [],
+  const productsFilePath = path.resolve(process.cwd(), 'src/app/data/products.json');
+  let sampleProducts = [];
+
+  if (fs.existsSync(productsFilePath)) {
+    const rawProducts = fs.readFileSync(productsFilePath, 'utf8');
+    const jsonData = JSON.parse(rawProducts);
+    sampleProducts = (jsonData.products || []).map((product) => ({
+      name: product.name,
+      description: product.description,
+      price: Number(product.price || 0),
+      category: product.category,
+      images: product.images || [],
       seller: seller._id,
-      stock: 120,
+      stock: Number(product.stock ?? 0),
       isActive: true,
-      tags: ["bamboo", "eco", "daily-use"],
-      sustainability: {
-        ecoFriendly: true,
-        recyclable: true,
-        organic: false,
-        carbonFootprint: "low",
-      },
-    },
-    {
-      name: "Reusable Steel Bottle",
-      description: "Insulated steel bottle to reduce single-use plastic waste.",
-      price: 699,
-      category: "Lifestyle",
-      images: [],
-      seller: seller._id,
-      stock: 75,
-      isActive: true,
-      tags: ["reusable", "steel", "hydration"],
-      sustainability: {
-        ecoFriendly: true,
-        recyclable: true,
-        organic: false,
-        carbonFootprint: "low",
-      },
-    },
-    {
-      name: "Organic Cotton Tote Bag",
-      description: "Durable tote bag made from certified organic cotton.",
-      price: 299,
-      category: "Fashion",
-      images: [],
-      seller: seller._id,
-      stock: 150,
-      isActive: true,
-      tags: ["organic", "cotton", "tote"],
-      sustainability: {
-        ecoFriendly: true,
+      tags: product.tags || [],
+      sustainability: product.sustainability || {
+        ecoFriendly: false,
         recyclable: false,
-        organic: true,
-        carbonFootprint: "very low",
+        organic: false,
+        carbonFootprint: 'unknown',
       },
-    },
-  ];
+    }));
+  } else {
+    sampleProducts = [
+      {
+        name: "Bamboo Toothbrush",
+        description: "Eco-friendly toothbrush made with biodegradable bamboo.",
+        price: 99,
+        category: "Personal Care",
+        images: [],
+        seller: seller._id,
+        stock: 120,
+        isActive: true,
+        tags: ["bamboo", "eco", "daily-use"],
+        sustainability: {
+          ecoFriendly: true,
+          recyclable: true,
+          organic: false,
+          carbonFootprint: "low",
+        },
+      },
+    ];
+  }
 
   for (const product of sampleProducts) {
     await Product.updateOne(

@@ -15,6 +15,8 @@ async function connectWithRetry(attempt = 1) {
   if (!MONGODB_URI) {
     throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
   }
+
+  const opts = {
     bufferCommands: false,
     maxPoolSize: 10,
     serverSelectionTimeoutMS: 5000,
