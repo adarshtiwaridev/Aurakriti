@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { PRODUCT_CATEGORIES } from '@/lib/catalog';
 import { requireRole } from '@/lib/api-auth';
+import connectDB from '@/lib/db';
+import Product from '@/models/Product';
 import fs from 'fs';
 import path from 'path';
 
@@ -31,6 +33,27 @@ const mapProduct = (product) => ({
   createdAt: product.createdAt,
   updatedAt: product.createdAt,
   isFeatured: product.isFeatured,
+  isDemo: true,
+});
+
+const mapDbProduct = (product) => ({
+  id: String(product._id),
+  title: product.title,
+  name: product.title,
+  description: product.description,
+  price: product.price,
+  category: product.category,
+  images: product.images ?? [],
+  image: product.images?.[0] ?? '',
+  stock: product.stock,
+  rating: product.rating ?? 0,
+  tags: product.tags ?? [],
+  sellerId: product.seller ? String(product.seller) : null,
+  seller: null,
+  createdAt: product.createdAt,
+  updatedAt: product.updatedAt,
+  isFeatured: Boolean(product.isFeatured),
+  isDemo: false,
 });
 
 export async function GET(request) {
@@ -41,6 +64,65 @@ export async function GET(request) {
   const search = searchParams.get('search');
   const seller = searchParams.get('seller');
   const mine = searchParams.get('mine') === 'true';
+
+  // DB-first products so cart receives valid Mongo product ids.
+  try {
+    await connectDB();
+
+    const query = {};
+    if (mine) {
+      const auth = await requireRole(request, ['seller', 'admin']);
+      if (auth.error) {
+        return auth.error;
+      }
+      if (auth.user.role === 'seller') {
+        query.seller = auth.user._id;
+      }
+    } else {
+      query.isActive = true;
+    }
+
+    if (seller) {
+      query.seller = seller;
+    }
+
+    if (category && category !== 'All') {
+      query.category = String(category).toLowerCase();
+    }
+
+    if (search?.trim()) {
+      const regex = { $regex: search.trim(), $options: 'i' };
+      query.$or = [{ title: regex }, { description: regex }, { category: regex }];
+    }
+
+    const total = await Product.countDocuments(query);
+    const skip = Math.max(0, (page - 1) * limit);
+
+    const dbProducts = await Product.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const categoriesFromDb = await Product.distinct('category', mine && query.seller ? { seller: query.seller } : { isActive: true });
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        products: dbProducts.map(mapDbProduct),
+        categories: categoriesFromDb.length ? categoriesFromDb : PRODUCT_CATEGORIES,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit),
+        },
+        scope: mine ? 'seller' : 'public',
+      },
+    });
+  } catch {
+    // Fallback to static JSON data when DB is unavailable.
+  }
 
   // Read products from JSON file
   const filePath = path.join(process.cwd(), 'src/app/data/products.json');

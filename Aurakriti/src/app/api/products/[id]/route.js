@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { PRODUCT_CATEGORIES } from '@/lib/catalog';
 import { requireRole } from '@/lib/api-auth';
+import mongoose from 'mongoose';
+import connectDB from '@/lib/db';
+import Product from '@/models/Product';
 import fs from 'fs';
 import path from 'path';
 
@@ -30,10 +33,45 @@ const mapProduct = (product) => ({
   sellerId: null,
   seller: null,
   isActive: true,
+  isDemo: true,
+});
+
+const mapDbProduct = (product) => ({
+  id: String(product._id),
+  title: product.title,
+  name: product.title,
+  description: product.description,
+  price: product.price,
+  category: product.category,
+  images: product.images ?? [],
+  image: product.images?.[0] ?? '',
+  stock: product.stock,
+  rating: product.rating ?? 0,
+  tags: product.tags ?? [],
+  sellerId: product.seller ? String(product.seller) : null,
+  seller: null,
+  isActive: Boolean(product.isActive),
+  isDemo: false,
 });
 
 export async function GET(request, context) {
   const { id } = await context.params;
+
+  try {
+    await connectDB();
+
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      const dbProduct = await Product.findById(id).lean();
+      if (dbProduct && dbProduct.isActive) {
+        return NextResponse.json({
+          success: true,
+          data: mapDbProduct(dbProduct),
+        });
+      }
+    }
+  } catch {
+    // fall back to JSON below
+  }
 
   // Read products from JSON file
   const filePath = path.join(process.cwd(), 'src/app/data/products.json');
