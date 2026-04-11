@@ -1,15 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fffdf9;
-  --panel: rgba(255, 253, 249, 0.98);
-  --foreground: #29201a;
-  --muted: #6f5c4a;
+  --background: #fff7ed;
+  --panel: rgba(255, 247, 237, 0.97);
+  --surface: #fdf5e8;
+  --foreground: #3c2f22;
+  --muted: #7c6242;
   --accent: #c9a14a;
-  --accent-soft: rgba(201, 161, 74, 0.12);
-  --border: rgba(147, 112, 43, 0.16);
-  --shadow-soft: 0 24px 80px -50px rgba(110, 72, 26, 0.18);
-  --shadow-lift: 0 24px 60px -28px rgba(147, 112, 43, 0.18);
+  --accent-soft: rgba(201, 161, 74, 0.16);
+  --border: rgba(201, 161, 74, 0.24);
+  --shadow-soft: 0 24px 80px -48px rgba(177, 124, 36, 0.16);
+  --shadow-lift: 0 24px 60px -28px rgba(201, 161, 74, 0.18);
   --font-serif: var(--font-playfair-display);
 }
 
@@ -23,9 +24,22 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: var(--background);
+  background: linear-gradient(180deg, #fff8ec 0%, #f9eed8 100%);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+main, section, article, header, footer {
+  color: inherit;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+  height: auto;
 }
 
 .luxury-serif {
@@ -33,5 +47,5 @@ body {
 }
 
 ::selection {
-  background: rgba(201, 161, 74, 0.2);
+  background: rgba(201, 161, 74, 0.25);
 }

@@ -144,14 +144,6 @@ export default function ProductDetailsPage() {
       setAdding(false);
     }
   };
-    } finally {
-      setAdding(false);
-    }
-  };
-    } finally {
-      setAdding(false);
-    }
-  };
 
   const images = product?.images?.length ? product.images : product?.image ? [product.image] : [];
   const displayImage = images[activeImage] || 'https://placehold.co/900x900?text=Product';

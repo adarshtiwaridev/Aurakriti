@@ -1,23 +1,25 @@
 'use client';
 
+import Image from 'next/image';
+
 const offerCards = [
   {
-    title: 'Clothes',
-    subtitle: 'Comfortable sustainable wear',
-    image: 'https://images.unsplash.com/photo-1521334884684-d80222895322?auto=format&fit=crop&w=900&q=80',
-    label: 'Shop Now',
+    title: 'Golden Choker Collection',
+    subtitle: 'Delicate designs with premium gold finishes.',
+    image: 'https://images.unsplash.com/photo-1522312346375-d1a52e2b99b3?auto=format&fit=crop&w=900&q=80',
+    label: 'Explore Now',
   },
   {
-    title: 'Accessories',
-    subtitle: 'Eco-friendly everyday essentials',
-    image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=900&q=80',
-    label: 'Shop Now',
+    title: 'Timeless Necklaces',
+    subtitle: 'Crafted for bridal elegance and everyday luxury.',
+    image: 'https://images.unsplash.com/photo-1503341455253-b2e723bb3dbb?auto=format&fit=crop&w=900&q=80',
+    label: 'Shop Collection',
   },
   {
-    title: 'Electronics',
-    subtitle: 'Tech with a green mindset',
-    image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=900&q=80',
-    label: 'Shop Now',
+    title: 'Signature Watches',
+    subtitle: 'Polished gold timepieces with classic appeal.',
+    image: 'https://images.unsplash.com/photo-1518546305925-79f9aa5e6d84?auto=format&fit=crop&w=900&q=80',
+    label: 'View Range',
   },
 ];
 
@@ -27,32 +29,35 @@ export default function OfferSection() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between mb-8">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.35em] text-green-600">🔥 Trending Offers</p>
-            <h2 className="mt-3 text-3xl font-black text-slate-900 sm:text-4xl">Discover premium deals for every category.</h2>
+            <p className="text-sm font-semibold uppercase tracking-[0.35em] text-[#a77d2f]">✨ Exclusive Gold Picks</p>
+            <h2 className="mt-3 text-3xl font-black text-[#372819] sm:text-4xl">Discover the golden touch in every piece.</h2>
           </div>
-          <p className="max-w-xl text-sm text-slate-500">Selected offers from sustainable collections designed for comfort, style, and impact.</p>
+          <p className="max-w-xl text-sm text-[#5c4b38]">Curated jewellery collections with warm gold tones, luxurious textures, and elegant craftsmanship.</p>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
           {offerCards.map((offer) => (
             <article
               key={offer.title}
-              className="group relative overflow-hidden rounded-4xl bg-slate-900 shadow-2xl shadow-slate-100"
+              className="group relative overflow-hidden rounded-[2rem] bg-[#fff5e7] shadow-[0_30px_80px_-55px_rgba(193,150,70,0.35)]"
               style={{ minHeight: '320px' }}
             >
-              <img
+              <Image
                 src={offer.image}
                 alt={offer.title}
-                className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105"
+                fill
+                sizes="(max-width: 768px) 100vw, 33vw"
+                className="absolute inset-0 object-cover transition duration-700 group-hover:scale-105"
+                priority={false}
               />
-              <div className="absolute inset-0 bg-linear-to-t from-slate-950/75 via-slate-950/35 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#2b1f12]/80 via-[#3e2b18]/35 to-transparent" />
               <div className="relative p-8 h-full flex flex-col justify-end">
-                <span className="inline-flex items-center rounded-full bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.3em] text-white/80 backdrop-blur-sm">
+                <span className="inline-flex items-center rounded-full bg-[#fff2dd]/90 px-4 py-2 text-xs font-bold uppercase tracking-[0.3em] text-[#735c3d] backdrop-blur-sm">
                   {offer.title}
                 </span>
                 <h3 className="mt-4 text-3xl font-black text-white">{offer.title}</h3>
-                <p className="mt-3 max-w-xs text-sm leading-relaxed text-slate-200">{offer.subtitle}</p>
-                <button className="mt-8 inline-flex items-center rounded-full bg-white px-6 py-3 text-sm font-black uppercase tracking-[0.18em] text-slate-900 shadow-xl transition hover:-translate-y-1 hover:bg-green-100">
+                <p className="mt-3 max-w-xs text-sm leading-relaxed text-[#f2e7d5]">{offer.subtitle}</p>
+                <button className="mt-8 inline-flex items-center rounded-full bg-[#c9a14a] px-6 py-3 text-sm font-black uppercase tracking-[0.18em] text-white shadow-xl transition hover:bg-[#d4af37]">
                   {offer.label}
                 </button>
               </div>
