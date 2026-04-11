@@ -1,112 +1,144 @@
 import React from 'react';
 
+const HD_IMAGES = {
+  hero: 'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=1920&q=85&auto=format&fit=crop',
+  gallery1: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=900&q=85&auto=format&fit=crop',
+  gallery2: 'https://images.unsplash.com/photo-1602173574767-37ac01994b2a?w=900&q=85&auto=format&fit=crop',
+  gallery3: 'https://images.unsplash.com/photo-1611652022419-a9419f74343d?w=900&q=85&auto=format&fit=crop',
+};
+
 const About = () => {
   return (
-    <div className="min-h-screen bg-[#fafbfc] text-slate-900 font-sans">
-      
-      {/* --- Hero Section --- */}
-      <section className="relative pt-32 pb-20 overflow-hidden bg-white">
-        <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <div>
-            <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-6 border border-green-100">
-              Our Journey
-            </div>
-            <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight text-slate-900 mb-6 leading-tight">
-              We’re on a mission to <span className="text-green-600">heal the planet</span> through retail.
-            </h1>
-            <p className="text-lg text-slate-600 leading-relaxed mb-8">
-              EcoCommerce started with a simple question: Can we shop without leaving a footprint? Today, we connect over 50,000 conscious consumers with verified sustainable brands.
-            </p>
-            <div className="flex gap-4">
-              <div className="text-center p-4 rounded-2xl bg-slate-50 border border-slate-100 min-w-[100px]">
-                <div className="text-2xl font-bold text-green-600">50K+</div>
-                <div className="text-xs text-slate-500 font-semibold uppercase">Users</div>
-              </div>
-              <div className="text-center p-4 rounded-2xl bg-slate-50 border border-slate-100 min-w-[100px]">
-                <div className="text-2xl font-bold text-green-600">200+</div>
-                <div className="text-xs text-slate-500 font-semibold uppercase">Brands</div>
-              </div>
-              <div className="text-center p-4 rounded-2xl bg-slate-50 border border-slate-100 min-w-[100px]">
-                <div className="text-2xl font-bold text-green-600">0</div>
-                <div className="text-xs text-slate-500 font-semibold uppercase">Carbon</div>
-              </div>
-            </div>
-          </div>
-          <div className="relative">
-            <div className="aspect-square rounded-3xl bg-green-100 overflow-hidden shadow-2xl relative">
-               {/* Placeholder for an image - Using a styled div to mimic a premium look */}
-               <div className="absolute inset-0 bg-gradient-to-tr from-green-600/20 to-transparent"></div>
-               <div className="flex items-center justify-center h-full">
-                  <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C10 14.5 10.5 13 12 13s2 1.5 5 2c3.23.64 5.08 3 5.08 6"/></svg>
-               </div>
-            </div>
-            <div className="absolute -bottom-6 -left-6 bg-white p-6 rounded-2xl shadow-xl border border-slate-100 hidden md:block">
-              <p className="text-sm font-bold text-slate-900 italic">&quot;The best for the world, not just in the world.&quot;</p>
-            </div>
-          </div>
-        </div>
-      </section>
+    <div className="min-h-screen bg-[#fffcf8] text-[#3d2f24]">
 
-      {/* --- Values Section --- */}
-      <section className="max-w-7xl mx-auto px-6 py-24">
-        <div className="text-center max-w-2xl mx-auto mb-16">
-          <h2 className="text-3xl font-bold text-slate-900 mb-4">Core Values</h2>
-          <p className="text-slate-500">Every decision we make is guided by our commitment to the environment and our community.</p>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Card 1 */}
-          <div className="group p-8 rounded-3xl bg-white border border-slate-100 hover:border-green-200 hover:shadow-2xl hover:shadow-green-50/50 transition-all duration-300">
-            <div className="bg-green-50 w-14 h-14 rounded-2xl flex items-center justify-center mb-6 text-green-600 group-hover:scale-110 transition-transform">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-            </div>
-            <h3 className="text-xl font-bold text-slate-900 mb-3">Radical Transparency</h3>
-            <p className="text-slate-600 leading-relaxed text-sm">We believe you deserve to know where your products come from and how they are made.</p>
-          </div>
-
-          {/* Card 2 */}
-          <div className="group p-8 rounded-3xl bg-white border border-slate-100 hover:border-blue-200 hover:shadow-2xl hover:shadow-blue-50/50 transition-all duration-300">
-            <div className="bg-blue-50 w-14 h-14 rounded-2xl flex items-center justify-center mb-6 text-blue-600 group-hover:scale-110 transition-transform">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-            </div>
-            <h3 className="text-xl font-bold text-slate-900 mb-3">Community First</h3>
-            <p className="text-slate-600 leading-relaxed text-sm">Our marketplace is built by activists, for activists. Your voice shapes our catalog.</p>
-          </div>
-
-          {/* Card 3 */}
-          <div className="group p-8 rounded-3xl bg-white border border-slate-100 hover:border-purple-200 hover:shadow-2xl hover:shadow-purple-50/50 transition-all duration-300">
-            <div className="bg-purple-50 w-14 h-14 rounded-2xl flex items-center justify-center mb-6 text-purple-600 group-hover:scale-110 transition-transform">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
-            </div>
-            <h3 className="text-xl font-bold text-slate-900 mb-3">Future Focused</h3>
-            <p className="text-slate-600 leading-relaxed text-sm">We don&apos;t just solve today&apos;s problems; we invest in the technology of tomorrow.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* --- CTA Section --- */}
-      <section className="max-w-7xl mx-auto px-6 pb-24">
-        <div className="bg-slate-900 rounded-[3rem] p-12 md:p-20 text-center relative overflow-hidden">
-          {/* Decorative Background Circles */}
-          <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-64 h-64 bg-green-500/10 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/2 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
-          
-          <h2 className="text-3xl md:text-5xl font-bold text-white mb-6 relative z-10">
-            Ready to change the way <br />you shop?
-          </h2>
-          <p className="text-slate-400 mb-10 max-w-xl mx-auto relative z-10">
-            Join thousands of others making an impact with every purchase. Sign up for our eco-newsletter or start browsing.
+      {/* Hero Banner */}
+      <div className="relative h-[45vh] min-h-[320px] overflow-hidden">
+        <img
+          src={HD_IMAGES.hero}
+          alt="Aurakriti jewellery collection"
+          className="h-full w-full object-cover object-center"
+          loading="eager"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#2c1f10]/60 via-[#2c1f10]/30 to-[#fffcf8]" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.45em] text-[#f5d98b] mb-3">Est. 2020</p>
+          <h1 className="luxury-serif text-4xl sm:text-6xl text-white drop-shadow-lg">Our Story</h1>
+          <p className="mt-3 text-[#f0e0c0] text-sm sm:text-base max-w-lg">
+            Crafting jewellery that honours tradition and celebrates modern women
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center relative z-10">
-            <button className="bg-green-600 text-white px-8 py-4 rounded-2xl font-bold hover:bg-green-700 transition-all shadow-xl shadow-green-900/20">
-              Join the Community
-            </button>
-            <button className="bg-white/10 text-white backdrop-blur-md px-8 py-4 rounded-2xl font-bold hover:bg-white/20 transition-all">
-              Read Our Reports
-            </button>
+        </div>
+      </div>
+
+      {/* Two-Column Section */}
+      <section className="mx-auto max-w-7xl px-6 py-16">
+        <div className="grid items-center gap-10 lg:grid-cols-2">
+
+          {/* Image Left */}
+          <div className="relative overflow-hidden rounded-[2rem] shadow-[0_30px_80px_-30px_rgba(60,30,10,0.35)]">
+            <img
+              src={HD_IMAGES.gallery1}
+              alt="Aurakriti artisans at work"
+              className="h-[480px] w-full object-cover object-center"
+              loading="lazy"
+            />
+            <div className="absolute bottom-4 left-4 right-4 rounded-2xl bg-white/90 backdrop-blur-sm px-5 py-3 shadow-lg">
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#9f7a40]">Handcrafted in India</p>
+              <p className="luxury-serif text-lg text-[#3d2f24]">Every piece, a masterpiece</p>
+            </div>
+          </div>
+
+          {/* Text Right */}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.4em] text-[#9f7a40] mb-4">About Aurakriti</p>
+            <h2 className="luxury-serif text-4xl sm:text-5xl leading-tight">
+              Timeless artistry,<br />modern grace
+            </h2>
+            <p className="mt-6 text-base leading-8 text-[#6b5645]">
+              Aurakriti began as a dream born in the heart of India&apos;s finest jewellery studios — to bring
+              together the richness of traditional craftsmanship with the clean elegance of contemporary design.
+            </p>
+            <p className="mt-4 text-base leading-8 text-[#6b5645]">
+              From bridal chokers to contemporary necklaces, every piece is designed to feel luxurious, radiant,
+              and deeply personal — crafted for life&apos;s most meaningful moments.
+            </p>
+
+            {/* Stats */}
+            <div className="mt-10 grid grid-cols-3 gap-4">
+              {[
+                { value: '5000+', label: 'Happy Brides' },
+                { value: '200+', label: 'Unique Designs' },
+                { value: '15+', label: 'Years of Craft' },
+              ].map(({ value, label }) => (
+                <div key={label} className="rounded-2xl border border-[#eadfce] bg-white p-4 text-center shadow-sm">
+                  <p className="luxury-serif text-2xl text-[#c9a14a] font-bold">{value}</p>
+                  <p className="mt-1 text-xs text-[#9b7a48]">{label}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
+
+      {/* Gallery Row */}
+      <section className="mx-auto max-w-7xl px-6 pb-6">
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="overflow-hidden rounded-[1.5rem] shadow-md">
+            <img
+              src={HD_IMAGES.gallery2}
+              alt="Bridal necklace collection"
+              className="h-64 w-full object-cover object-center hover:scale-105 transition-transform duration-700"
+              loading="lazy"
+            />
+          </div>
+          <div className="overflow-hidden rounded-[1.5rem] shadow-md">
+            <img
+              src={HD_IMAGES.gallery3}
+              alt="Luxury jewellery display"
+              className="h-64 w-full object-cover object-center hover:scale-105 transition-transform duration-700"
+              loading="lazy"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Feature Cards */}
+      <section className="mx-auto max-w-7xl px-6 pb-20 pt-10">
+        <div className="text-center mb-10">
+          <p className="text-xs font-semibold uppercase tracking-[0.4em] text-[#9f7a40] mb-3">Why Aurakriti</p>
+          <h2 className="luxury-serif text-3xl sm:text-4xl text-[#3d2f24]">Our Promise to You</h2>
+        </div>
+        <div className="grid gap-5 md:grid-cols-3">
+          {[
+            {
+              icon: '✦',
+              title: 'Handcrafted Excellence',
+              text: 'Each clasp, stone, and setting is meticulously finished by skilled artisans who have devoted their lives to the craft.',
+            },
+            {
+              icon: '◈',
+              title: 'Premium Materials',
+              text: 'We source only the finest — lustrous metals, brilliant gemstones, and durable clasps — curated for lasting beauty.',
+            },
+            {
+              icon: '❋',
+              title: 'Bridal Boutique Feel',
+              text: "A clean, luxurious shopping experience inspired by the world's finest jewellery boutiques, delivered to your door.",
+            },
+          ].map((item) => (
+            <article
+              key={item.title}
+              className="rounded-[1.8rem] border border-[#eadfce] bg-white p-7 shadow-[0_18px_55px_-40px_rgba(147,112,43,0.28)] hover:shadow-[0_25px_60px_-30px_rgba(147,112,43,0.38)] transition-shadow"
+            >
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#fff4de] text-[#c9a14a] text-xl font-bold">
+                {item.icon}
+              </div>
+              <h3 className="luxury-serif text-xl text-[#2f241b] mb-3">{item.title}</h3>
+              <p className="text-sm leading-7 text-[#6b5645]">{item.text}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
     </div>
   );
 };

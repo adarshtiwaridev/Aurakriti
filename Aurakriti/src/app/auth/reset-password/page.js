@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
@@ -36,7 +36,6 @@ export default function ResetPasswordPage() {
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(resetPasswordSchema),
@@ -185,9 +184,8 @@ export default function ResetPasswordPage() {
             Back to sign in
           </Link>
         </div>
-      }
-    >
-      <ResetPasswordClient />
-    </Suspense>
+      </form>
+      <Toaster position="top-right" />
+    </AuthLayout>
   );
 }

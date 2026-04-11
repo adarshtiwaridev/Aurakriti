@@ -29,21 +29,22 @@ export default function ProductCard({ product, onAddToCart }) {
   };
 
   const safeName = product.name || product.title;
-  const safeImage = product.image || product.images?.[0] || 'https://via.placeholder.com/800x800?text=Product';
+  const safeImage = product.image || product.images?.[0] || 'https://via.placeholder.com/800x800?text=Jewellery';
   const secondImage = product.images?.[1] || null;
+  const rating = Number(product.rating || 4.5).toFixed(1);
 
   return (
     <>
-      <article className="group relative flex flex-col overflow-hidden rounded-[2rem] border border-[#ebdfd0] bg-white shadow-[0_26px_70px_-44px_rgba(147,112,43,0.25)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_28px_90px_-44px_rgba(147,112,43,0.28)]">
-        <div className="relative overflow-hidden border-b border-[#f1e5d4] bg-[#fff7ed]">
+      <article className="group relative flex h-full flex-col overflow-hidden rounded-4xl border border-[#eadfce] bg-white shadow-[0_24px_70px_-44px_rgba(147,112,43,0.28)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_28px_80px_-42px_rgba(147,112,43,0.35)]">
+        <div className="relative overflow-hidden border-b border-[#f1e5d4] bg-[#fff8ef]">
           <Link href={`/products/${productId}`} onClick={handleProductClick}>
-            <div className="relative h-72 w-full overflow-hidden transition duration-700 group-hover:scale-[1.02]">
+            <div className="relative h-72 w-full overflow-hidden">
               <Image
                 src={safeImage}
                 alt={safeName}
                 fill
                 sizes="(max-width: 768px) 100vw, 320px"
-                className="object-cover transition duration-700"
+                className="object-cover transition duration-700 group-hover:scale-110"
               />
               {secondImage ? (
                 <Image
@@ -56,94 +57,96 @@ export default function ProductCard({ product, onAddToCart }) {
               ) : null}
             </div>
           </Link>
+
           <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[10px] font-black uppercase tracking-[0.23em] text-[#6e5642] shadow-sm">
             {product.category}
           </span>
-        {/* Compare toggle badge */}
-        <button
-          onClick={toggleCompare}
-          title={isInCompare ? 'Remove from compare' : compareFull ? 'Max 4 products' : 'Add to compare'}
-          className={`absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-[#e7dbc8] bg-white text-[11px] font-black shadow-sm transition-all ${
-            isInCompare
-              ? 'bg-[#c9a14a] text-white border-transparent'
-              : compareFull
-              ? 'cursor-not-allowed bg-[#f5efe5] text-[#b8a78b]'
-              : 'text-[#6f5c4a] hover:bg-[#fff4e6] hover:text-[#c9a14a]'
-          }`}
-        >
-          {isInCompare ? '✓' : '⇄'}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setShowQuickView(true)}
-          className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-[#3d3024]/90 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-white opacity-0 transition duration-300 group-hover:opacity-100"
-        >
-          Quick View
-        </button>
-      </div>
-
-      <div className="flex flex-1 flex-col p-6">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <Link href={`/products/${productId}`} onClick={handleProductClick} className="text-xl font-semibold text-[#3c2f25] transition hover:text-[#c9a14a]">
-            {safeName}
-          </Link>
-          <p className="text-lg font-black text-[#c9a14a]">₹{product.price}</p>
-        </div>
-        <p className="text-sm leading-6 text-[#6b5546] line-clamp-2">{product.description}</p>
-
-        <div className="mt-auto space-y-3">
-          {/* Compare label */}
-          {isInCompare && (
-            <p className="text-center text-xs font-semibold uppercase tracking-[0.24em] text-[#8f765d]">Added to compare</p>
-          )}
 
           <button
-            onClick={() => onAddToCart(product)}
-            disabled={product.isDemo}
-            className={`w-full inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-white shadow-[0_20px_45px_-25px_rgba(201,161,74,0.45)] transition ${
-              product.isDemo
-                ? 'bg-[#d9cab7] cursor-not-allowed shadow-none'
-                : 'bg-[#c9a14a] hover:bg-[#d4af37]'
+            type="button"
+            onClick={toggleCompare}
+            title={isInCompare ? 'Remove from compare' : compareFull ? 'Max 4 products' : 'Add to compare'}
+            className={`absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-[#e7dbc8] bg-white text-[11px] font-black shadow-sm transition-all ${
+              isInCompare
+                ? 'border-transparent bg-[#c9a14a] text-white'
+                : compareFull
+                ? 'cursor-not-allowed bg-[#f5efe5] text-[#b8a78b]'
+                : 'text-[#6f5c4a] hover:bg-[#fff4e6] hover:text-[#c9a14a]'
             }`}
           >
-            {product.isDemo ? 'Demo Product' : 'Add to Cart'}
+            {isInCompare ? 'OK' : 'CP'}
           </button>
-          <Link
-            href={`/products/${productId}`}
-            onClick={handleProductClick}
-            className="mt-3 inline-flex w-full items-center justify-center rounded-full border border-[#f0e4d4] bg-[#fff8ee] px-6 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-[#5c4736] transition hover:border-[#c9a14a] hover:bg-[#fff4e2]"
-          >
-            View Details
-          </Link>
         </div>
-      </div>
+
+        <div className="flex flex-1 flex-col p-6">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <Link href={`/products/${productId}`} onClick={handleProductClick} className="text-lg font-semibold text-[#3c2f25] transition hover:text-[#c9a14a]">
+              {safeName}
+            </Link>
+            <p className="text-lg font-black text-[#c9a14a]">Rs {Number(product.price || 0).toLocaleString('en-IN')}</p>
+          </div>
+
+          <p className="mb-4 text-xs font-semibold uppercase tracking-[0.2em] text-[#967449]">Rating {rating}/5</p>
+          <p className="line-clamp-2 text-sm leading-6 text-[#6b5546]">{product.description}</p>
+
+          <div className="mt-auto space-y-3 pt-5">
+            <button
+              type="button"
+              onClick={() => onAddToCart(product)}
+              disabled={product.isDemo}
+              className={`inline-flex w-full items-center justify-center rounded-full px-6 py-3 text-sm font-semibold uppercase tracking-[0.16em] transition ${
+                product.isDemo
+                  ? 'cursor-not-allowed bg-[#d9cab7] text-white'
+                  : 'bg-[#c9a14a] text-white hover:bg-[#b88f37]'
+              }`}
+            >
+              {product.isDemo ? 'Demo Product' : 'Add to Cart'}
+            </button>
+
+            <Link
+              href={`/products/${productId}`}
+              onClick={handleProductClick}
+              className="inline-flex w-full items-center justify-center rounded-full border border-[#c9a14a] bg-white px-6 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-[#6b5134] transition hover:bg-[#fff5e4]"
+            >
+              View Details
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => setShowQuickView(true)}
+              className="inline-flex w-full items-center justify-center rounded-full border border-[#efe3d2] bg-[#fffaf2] px-6 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-[#7b6142] transition hover:border-[#c9a14a]"
+            >
+              Quick View
+            </button>
+          </div>
+        </div>
       </article>
 
       {showQuickView ? (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 p-4" onClick={() => setShowQuickView(false)}>
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-[#2c241d]/35 p-4" onClick={() => setShowQuickView(false)}>
           <div className="grid w-full max-w-3xl gap-5 rounded-3xl bg-white p-5 shadow-2xl md:grid-cols-[0.95fr_1.05fr]" onClick={(event) => event.stopPropagation()}>
             <img src={safeImage} alt={safeName} className="h-64 w-full rounded-2xl object-cover md:h-full" />
             <div className="flex flex-col">
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-600">{product.category}</p>
-              <h3 className="mt-2 text-2xl font-black text-slate-900">{safeName}</h3>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{product.description}</p>
-              <p className="mt-3 text-2xl font-black text-emerald-700">₹{Number(product.price || 0).toLocaleString('en-IN')}</p>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#9a7a45]">{product.category}</p>
+              <h3 className="mt-2 text-2xl font-black text-[#3a2f24]">{safeName}</h3>
+              <p className="mt-2 text-sm leading-6 text-[#6b5546]">{product.description}</p>
+              <p className="mt-3 text-2xl font-black text-[#c9a14a]">Rs {Number(product.price || 0).toLocaleString('en-IN')}</p>
 
               <div className="mt-auto flex flex-wrap gap-2 pt-5">
                 <button
+                  type="button"
                   onClick={() => {
                     onAddToCart(product);
                     setShowQuickView(false);
                   }}
-                  className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white"
+                  className="rounded-xl bg-[#c9a14a] px-4 py-2 text-sm font-semibold text-white"
                 >
                   Add to Cart
                 </button>
-                <Link href={`/products/${productId}`} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700">
+                <Link href={`/products/${productId}`} className="rounded-xl border border-[#e8dccb] px-4 py-2 text-sm font-semibold text-[#5f4b38]">
                   View Product
                 </Link>
-                <button onClick={() => setShowQuickView(false)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700">
+                <button type="button" onClick={() => setShowQuickView(false)} className="rounded-xl border border-[#e8dccb] px-4 py-2 text-sm font-semibold text-[#5f4b38]">
                   Close
                 </button>
               </div>

@@ -442,6 +442,9 @@ export default function Navbar({ cartCount = 0, searchTerm, onSearch }) {
             <Link href="/contact" className="block rounded-3xl px-3 py-2 text-sm font-semibold text-[#5a4b3d] transition hover:bg-[#fff4e6]">
               Contact
             </Link>
+            <Link href="/user/cart" className="block rounded-3xl px-3 py-2 text-sm font-semibold text-[#5a4b3d] transition hover:bg-[#fff4e6]">
+              Cart
+            </Link>
           </div>
         </div>
       )}
