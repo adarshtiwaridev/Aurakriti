@@ -8,6 +8,7 @@ import { sendEmail, sendOrderConfirmationEmail } from '@/lib/email';
 import { notifySellersForNewOrder } from '@/lib/notifications';
 import { verifyPaymentSignature } from '@/lib/razorpay';
 import { generateAndStoreInvoice } from '@/lib/invoice';
+import { getAppUrl } from '@/lib/app-url';
 import mongoose from 'mongoose';
 
 export const runtime = 'nodejs';
@@ -89,14 +90,6 @@ export async function POST(request) {
       signature: razorpay_signature,
     });
 
-    console.log('[Payment/Verify] Verification result:', {
-      sessionId: String(session._id),
-      razorpay_order_id,
-      razorpay_payment_id,
-      valid: verification.valid,
-      mode: verification.mode,
-    });
-
     if (!verification.valid) {
       session.status = 'failed';
       session.paymentFailureReason = 'Invalid Razorpay signature';
@@ -149,11 +142,6 @@ export async function POST(request) {
       };
       await populatedOrder.save();
       invoiceMeta = invoice;
-      console.log('[Payment/Verify] Invoice generated:', {
-        orderId: String(populatedOrder._id),
-        fileName: invoice.fileName,
-        url: invoice.publicUrl,
-      });
     } catch (invoiceError) {
       console.error('[Payment/Verify] Invoice generation failed:', invoiceError);
     }
@@ -181,7 +169,7 @@ export async function POST(request) {
     ).catch((error) => console.error('Payment success email error:', error.message));
 
     if (invoiceMeta?.publicUrl) {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+      const appUrl = getAppUrl();
       sendEmail(
         auth.user.email,
         `Invoice #${orderCode} - EcoCommerce`,

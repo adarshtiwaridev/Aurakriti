@@ -1,6 +1,7 @@
 import { Inter, Playfair_Display } from 'next/font/google';
 import ReduxProvider from '@/components/ReduxProvider';
 import FloatingChatbot from '@/components/ecommerce/FloatingChatbot';
+import { getAppUrlObject } from '@/lib/app-url';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'], display: 'swap' });
@@ -16,7 +17,7 @@ export const metadata = {
     apple: '/apple-touch-icon.png',
   },
   manifest: '/manifest.json',
-  metadataBase: new URL('http://localhost:3000'),
+  metadataBase: getAppUrlObject(),
 };
 
 export const viewport = {

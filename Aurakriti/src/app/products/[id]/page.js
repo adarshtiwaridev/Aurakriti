@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -77,21 +78,18 @@ export default function ProductDetailsPage() {
 
   useEffect(() => {
     if (!productId) {
-      console.warn('[ProductDetails] No product ID in params — check the URL and Link href.');
       setError('No product ID provided.');
       setLoading(false);
       return;
     }
 
     let active = true;
-    console.log('[ProductDetails] Loading product id:', productId);
 
     async function loadProduct() {
       try {
         setLoading(true);
         setError('');
         const data = await getProduct(productId);
-        console.log('[ProductDetails] Received product:', data?.id, data?.title);
         if (!active) return;
         setProduct(data);
         setActiveImage(0);
@@ -164,13 +162,15 @@ export default function ProductDetailsPage() {
           <section className="mt-6 grid gap-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:grid-cols-[1fr_1fr]">
             {/* Images */}
             <div>
-              <img
-                src={displayImage}
-                alt={product.title}
-                className="w-full rounded-3xl object-cover"
-                style={{ height: '28rem' }}
-                onError={(e) => { e.currentTarget.src = 'https://placehold.co/900x900?text=Product'; }}
-              />
+              <div className="relative h-[28rem] w-full overflow-hidden rounded-3xl">
+                <Image
+                  src={displayImage}
+                  alt={product.title}
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  className="object-cover"
+                />
+              </div>
               {images.length > 1 && (
                 <div className="mt-3 grid grid-cols-4 gap-2">
                   {images.slice(0, 4).map((img, idx) => (
@@ -180,7 +180,15 @@ export default function ProductDetailsPage() {
                       onClick={() => setActiveImage(idx)}
                       className={`overflow-hidden rounded-xl border-2 transition ${activeImage === idx ? 'border-emerald-500' : 'border-transparent'}`}
                     >
-                      <img src={img} alt={`${product.title} ${idx + 1}`} className="h-20 w-full object-cover" />
+                      <div className="relative h-20 w-full">
+                        <Image
+                          src={img}
+                          alt={`${product.title} ${idx + 1}`}
+                          fill
+                          sizes="96px"
+                          className="object-cover"
+                        />
+                      </div>
                     </button>
                   ))}
                 </div>

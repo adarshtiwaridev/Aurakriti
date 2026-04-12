@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { X } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -16,7 +17,13 @@ export default function CartItem({ item, onIncrement, onDecrement, onRemove }) {
       <div className="flex items-center gap-4 flex-1">
         <div className="relative h-32 w-32 flex-shrink-0 rounded-2xl overflow-hidden bg-[#f9f0e3]">
           {item.image ? (
-            <img src={item.image} alt={item.title} className="h-full w-full object-cover hover:scale-110 transition-transform duration-300" />
+            <Image
+              src={item.image}
+              alt={item.title}
+              fill
+              sizes="128px"
+              className="object-cover transition-transform duration-300 hover:scale-110"
+            />
           ) : (
             <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-[#f2e5d4] to-[#e7dccf]">
               <span className="text-4xl">✨</span>

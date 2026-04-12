@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { getAppUrl } from '@/lib/app-url';
 
 const smtpHost = process.env.SMTP_HOST?.trim() || 'smtp.gmail.com';
 const smtpPort = Number(process.env.SMTP_PORT?.trim() || 587);
@@ -72,7 +73,7 @@ export const sendEmail = async (to, subject, html, options = {}) => {
 };
 
 export const sendVerificationEmail = async (email, token) => {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  const appUrl = getAppUrl();
   const verificationUrl = `${appUrl}/auth/verify?token=${token}`;
 
   const html = `
@@ -90,7 +91,7 @@ export const sendVerificationEmail = async (email, token) => {
 };
 
 export const sendPasswordResetEmail = async (email, token) => {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  const appUrl = getAppUrl();
   const resetUrl = `${appUrl}/auth/reset-password?token=${token}`;
 
   const html = `
@@ -136,7 +137,7 @@ export const sendOTPEmail = async (email, otp, { purpose = 'verification' } = {}
 };
 
 export const sendOrderConfirmationEmail = async (order, user) => {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  const appUrl = getAppUrl();
   const invoiceUrl = order.invoice?.url ? `${appUrl}${order.invoice.url}` : '';
   const attachment = order.invoice?.path
     ? [
@@ -203,7 +204,7 @@ export const sendNewProductLaunchEmail = async (product, users = []) => {
     return;
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const appUrl = getAppUrl();
   const productUrl = `${appUrl}/products/${product._id ?? product.id}`;
   const imageUrl = product.images?.[0] ?? product.image ?? '';
   const imageHtml = imageUrl
@@ -305,7 +306,7 @@ export const sendOrderStatusEmail = async (order, user, newStatus) => {
   const trackingLinkHtml = tracking.trackingUrl
     ? `<p style="margin:8px 0 0"><a href="${tracking.trackingUrl}" style="color:#2563eb;text-decoration:none">Track your shipment</a></p>`
     : '';
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+  const appUrl = getAppUrl();
   const invoiceUrl = order.invoice?.url ? `${appUrl}${order.invoice.url}` : '';
   const invoiceAttachment = order.invoice?.path
     ? [

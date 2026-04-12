@@ -30,9 +30,7 @@ const RESET_PURPOSE = 'reset-password';
 
 const parseRequestBody = async (request) => {
   try {
-    const body = await request.json();
-    console.log('Parsed request body:', JSON.stringify(body));
-    return body;
+    return await request.json();
   } catch (error) {
     console.error('Error parsing request body:', error);
     return {};
@@ -64,11 +62,7 @@ const invalidatePreviousOtps = async (userId, purpose) => {
 const createOtpRecord = async (userId, purpose) => {
   try {
     const otp = generateOtp();
-    console.log('Generated OTP:', otp, 'for purpose:', purpose);
-    
     const codeHash = await hashOtp(otp);
-    console.log('Hashed OTP:', codeHash);
-    
     const sentAt = new Date();
     const expiresAt = new Date(sentAt.getTime() + OTP_EXPIRY_MS);
 
@@ -81,11 +75,8 @@ const createOtpRecord = async (userId, purpose) => {
       isUsed: false,
       attempts: 0,
     };
-    
-    console.log('Creating OTP record:', JSON.stringify(otpData));
 
     const otpRecord = await Otp.create(otpData);
-    console.log('OTP record created successfully:', otpRecord._id);
 
     return { otpRecord, otp };
   } catch (error) {
@@ -96,9 +87,7 @@ const createOtpRecord = async (userId, purpose) => {
 
 const getLatestOtpRecord = async (userId, purpose) => {
   try {
-    const record = await Otp.findOne({ user: userId, purpose, isUsed: false }).sort({ sentAt: -1 });
-    console.log('Found OTP record:', record ? record._id : 'null');
-    return record;
+    return await Otp.findOne({ user: userId, purpose, isUsed: false }).sort({ sentAt: -1 });
   } catch (error) {
     console.error('Error fetching OTP record:', error);
     return null;
@@ -107,22 +96,16 @@ const getLatestOtpRecord = async (userId, purpose) => {
 
 const createAndSendOtp = async (user, purpose) => {
   try {
-    console.log('Starting createAndSendOtp for user:', user.email, 'purpose:', purpose);
-    
     await invalidatePreviousOtps(user._id, purpose);
-    console.log('Invalidated previous OTPs');
 
     const { otpRecord, otp } = await createOtpRecord(user._id, purpose);
-    console.log('OTP Record created. Now sending email...');
 
     try {
       await sendOTPEmail(user.email, otp, { purpose });
-      console.log('Email sent successfully');
     } catch (emailError) {
       console.error('Email sending error:', emailError);
-      console.log('Keeping OTP record despite email error');
     }
-    
+
     return otpRecord;
   } catch (error) {
     console.error('Error in createAndSendOtp:', error);
@@ -145,44 +128,35 @@ const buildVerificationData = (user, { otpSentAt, ...overrides } = {}) => ({
 });
 
 export const signupHandler = withErrorHandling('Signup', async (request) => {
-  console.log('=== SIGNUP HANDLER STARTED ===');
   await connectDB();
-  console.log('Database connected');
 
   const body = await parseRequestBody(request);
-  console.log('Request body:', { name: body.name, email: body.email, role: body.role });
-  
+
   const name = String(body.name ?? '').trim();
   const email = normalizeEmail(body.email);
   const password = String(body.password ?? '');
   const role = body.role ?? 'user';
 
   if (!name || !email || !password) {
-    console.log('Validation failed: missing fields');
     return createErrorResponse('Name, email, and password are required.', {}, 400);
   }
 
   if (password.length < 6) {
-    console.log('Password too short');
     return createErrorResponse('Password must be at least 6 characters long.', {}, 400);
   }
 
   if (!ALLOWED_SIGNUP_ROLES.includes(role)) {
-    console.log('Invalid role:', role);
     return createErrorResponse('Invalid role selected for signup.', {}, 400);
   }
 
-  console.log('Checking for existing user:', email);
   const existingUser = await User.findOne({ email });
   let user;
 
   if (existingUser?.isVerified) {
-    console.log('User already verified');
     return createErrorResponse('A verified user already exists with this email.', {}, 409);
   }
 
   if (existingUser) {
-    console.log('User exists but not verified, updating...');
     existingUser.name = name;
     existingUser.password = password;
     existingUser.role = role;
@@ -198,26 +172,20 @@ export const signupHandler = withErrorHandling('Signup', async (request) => {
     });
   }
 
-  console.log('Saving user...');
   await user.save();
-  console.log('User saved, now creating and sending OTP');
 
   let otpSent = false;
   let otpSentAt = null;
   let otpRecord = null;
 
   try {
-    console.log('Calling saveUserAndSendOtp...');
     otpRecord = await createAndSendOtp(user, VERIFICATION_PURPOSE);
-    console.log('OTP created and sent successfully');
     otpSent = true;
     otpSentAt = otpRecord.sentAt;
   } catch (error) {
     console.error('OTP creation/send error:', error);
-    console.log('Continuing without OTP...');
   }
 
-  console.log('=== SIGNUP HANDLER COMPLETED ===');
   return createSuccessResponse(
     otpSent
       ? 'Signup successful. Enter the OTP sent to your email to activate your account.'
@@ -294,24 +262,13 @@ export const loginHandler = withErrorHandling('Login', async (request) => {
 });
 
 export const verifyOtpHandler = withErrorHandling('Verify OTP', async (request) => {
-  console.log('=== VERIFY OTP HANDLER STARTED ===');
-  console.log('Request method:', request.method);
-  console.log('Request headers:', Object.fromEntries(request.headers));
-  
   await connectDB();
 
   const body = await parseRequestBody(request);
-  console.log('Request body after parsing:', body);
-  console.log('body.email:', body.email, 'type:', typeof body.email);
-  console.log('body.otp:', body.otp, 'type:', typeof body.otp);
-  
   const email = normalizeEmail(body.email);
   const otp = normalizeOtp(body.otp);
 
-  console.log('After normalization - email:', email, 'otp:', otp);
-
   if (!email || !otp) {
-    console.log('FAIL: Email or OTP is empty');
     return createErrorResponse('Email and OTP are required.', {}, 400);
   }
 
@@ -381,14 +338,11 @@ export const verifyOtpHandler = withErrorHandling('Verify OTP', async (request) 
 });
 
 export const resendOtpHandler = withErrorHandling('Resend OTP', async (request) => {
-  console.log('=== RESEND OTP HANDLER ===');
   await connectDB();
 
   const body = await parseRequestBody(request);
   const email = normalizeEmail(body.email);
   const purpose = body.purpose === RESET_PURPOSE ? RESET_PURPOSE : VERIFICATION_PURPOSE;
-
-  console.log('Resending OTP for:', email, 'purpose:', purpose);
 
   if (!email) {
     return createErrorResponse('Email is required to resend an OTP.', {}, 400);
@@ -408,7 +362,6 @@ export const resendOtpHandler = withErrorHandling('Resend OTP', async (request) 
 
   if (latestOtp && !canResendOtp(latestOtp.sentAt)) {
     const retryAfter = getResendAvailableInSeconds(latestOtp.sentAt);
-    console.log('Resend rate limited, retry after:', retryAfter);
     return createErrorResponse(
       'Please wait before requesting another OTP.',
       { retryAfterSeconds: retryAfter },
@@ -416,7 +369,6 @@ export const resendOtpHandler = withErrorHandling('Resend OTP', async (request) 
     );
   }
 
-  console.log('Creating and sending OTP...');
   const otpRecord = await createAndSendOtp(user, purpose);
 
   return createSuccessResponse(

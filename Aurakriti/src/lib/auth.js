@@ -1,6 +1,7 @@
 import { randomInt } from 'crypto';
 import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
+import { getAppUrl } from '@/lib/app-url';
 
 export const AUTH_COOKIE_NAME = 'ecocommerce_auth';
 export const AUTH_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
@@ -106,7 +107,7 @@ export const clearAuthCookie = (response) => {
   });
 };
 
-const DEFAULT_ALLOWED_ORIGINS = ['http://localhost:3000', 'http://127.0.0.1:3000'];
+const DEFAULT_ALLOWED_ORIGINS = [getAppUrl(), 'http://127.0.0.1:3000', 'http://localhost:3000'];
 
 export const resolveAllowedOrigin = (request) => {
   const requestOrigin = request.headers.get('origin');
@@ -114,6 +115,8 @@ export const resolveAllowedOrigin = (request) => {
     process.env.NEXT_PUBLIC_APP_URL,
     process.env.NEXTAUTH_URL,
     process.env.NEXT_PUBLIC_API_URL,
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : '',
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '',
     ...DEFAULT_ALLOWED_ORIGINS,
   ].filter(Boolean);
 

@@ -125,7 +125,15 @@ export default function ProductCard({ product, onAddToCart }) {
       {showQuickView ? (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-[#2c241d]/35 p-4" onClick={() => setShowQuickView(false)}>
           <div className="grid w-full max-w-3xl gap-5 rounded-3xl bg-white p-5 shadow-2xl md:grid-cols-[0.95fr_1.05fr]" onClick={(event) => event.stopPropagation()}>
-            <img src={safeImage} alt={safeName} className="h-64 w-full rounded-2xl object-cover md:h-full" />
+            <div className="relative h-64 w-full overflow-hidden rounded-2xl md:h-full">
+              <Image
+                src={safeImage}
+                alt={safeName}
+                fill
+                sizes="(max-width: 768px) 100vw, 420px"
+                className="object-cover"
+              />
+            </div>
             <div className="flex flex-col">
               <p className="text-xs font-black uppercase tracking-[0.2em] text-[#9a7a45]">{product.category}</p>
               <h3 className="mt-2 text-2xl font-black text-[#3a2f24]">{safeName}</h3>
