@@ -25,6 +25,7 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false);
   const { login, loading, demoLogin } = useAuth();
   const router = useRouter();
+  const googleOAuthUrl = process.env.NEXT_PUBLIC_GOOGLE_OAUTH_URL || '';
 
   const {
     register,
@@ -65,6 +66,18 @@ export default function LoginPage() {
         description: error.error || 'Unable to sign in with the demo account.',
       });
     }
+  };
+
+  const handleGoogleLogin = () => {
+    if (!googleOAuthUrl) {
+      toast.info('Google SSO is not configured for this deployment.');
+      return;
+    }
+
+    const callbackUrl = `${window.location.origin}/auth/login`;
+    const target = new URL(googleOAuthUrl);
+    target.searchParams.set('callbackUrl', callbackUrl);
+    window.location.assign(target.toString());
   };
 
   return (
@@ -137,6 +150,7 @@ export default function LoginPage() {
           <div className="mt-6 grid grid-cols-1 gap-3">
             <motion.button
               type="button"
+              onClick={handleGoogleLogin}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-xl shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors"

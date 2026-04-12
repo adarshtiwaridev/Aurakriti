@@ -30,6 +30,7 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { register: registerUser, loading } = useAuth();
   const router = useRouter();
+  const googleOAuthUrl = process.env.NEXT_PUBLIC_GOOGLE_OAUTH_URL || '';
 
   // Get initial role from URL params
   const getInitialRole = () => {
@@ -69,6 +70,18 @@ export default function RegisterPage() {
         description: error.error || 'Please try again.',
       });
     }
+  };
+
+  const handleGoogleSignup = () => {
+    if (!googleOAuthUrl) {
+      toast.info('Google SSO is not configured for this deployment.');
+      return;
+    }
+
+    const callbackUrl = `${window.location.origin}/auth/register`;
+    const target = new URL(googleOAuthUrl);
+    target.searchParams.set('callbackUrl', callbackUrl);
+    window.location.assign(target.toString());
   };
 
   return (
@@ -233,6 +246,7 @@ export default function RegisterPage() {
           <div className="mt-6 ">
             <motion.button
               type="button"
+              onClick={handleGoogleSignup}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-xl shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors"

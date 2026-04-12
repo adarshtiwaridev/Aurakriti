@@ -91,6 +91,7 @@ Create a `.env.local` file in the project root.
 ```env
 MONGODB_URI=
 JWT_SECRET=
+NEXT_PUBLIC_BASE_URL=
 NEXT_PUBLIC_APP_URL=
 ```
 
@@ -99,6 +100,7 @@ NEXT_PUBLIC_APP_URL=
 ```env
 NEXTAUTH_URL=
 NEXT_PUBLIC_API_URL=
+NEXT_PUBLIC_GOOGLE_OAUTH_URL=
 ```
 
 ### Email
@@ -245,10 +247,11 @@ If SMTP variables are missing, email sending is skipped safely instead of crashi
 
 - `MONGODB_URI` is configured
 - `JWT_SECRET` is configured
-- `NEXT_PUBLIC_APP_URL` matches deployed domain
+- `NEXT_PUBLIC_BASE_URL` matches deployed domain
 - SMTP credentials are valid
 - Razorpay keys are valid
 - Cloudinary keys are valid
+- OAuth callback URL is added in the provider console (if OAuth is enabled)
 
 ## Known Operational Notes
 

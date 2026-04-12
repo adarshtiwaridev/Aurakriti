@@ -1,23 +1,70 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BASE_URL || '';
 const TOKEN_STORAGE_KEY = 'ecoCommerceToken';
 const USER_STORAGE_KEY = 'ecoCommerceUser';
+
+const trimTrailingSlash = (value = '') => String(value).replace(/\/$/, '');
+
+const resolveApiBaseUrl = () => {
+  const configured = trimTrailingSlash(API_BASE_URL);
+  if (!configured) {
+    return '';
+  }
+
+  if (typeof window === 'undefined') {
+    return configured;
+  }
+
+  const hostname = window.location.hostname;
+  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+  if (isLocalhost) {
+    return '';
+  }
+
+  try {
+    const configuredUrl = new URL(configured, window.location.origin);
+    if (configuredUrl.origin === window.location.origin) {
+      return '';
+    }
+  } catch {
+    return '';
+  }
+
+  return configured;
+};
 
 class AuthService {
   constructor() {
     this.api = axios.create({
-      baseURL: API_BASE_URL,
+      baseURL: resolveApiBaseUrl(),
       headers: {
         'Content-Type': 'application/json',
       },
       withCredentials: true,
     });
 
+    this.api.interceptors.request.use((config) => {
+      const token = this.getToken();
+      if (token) {
+        config.headers = {
+          ...(config.headers || {}),
+          Authorization: `Bearer ${token}`,
+        };
+      }
+      return config;
+    });
+
     this.api.interceptors.response.use(
       (response) => response,
       (error) => {
-        if (error.response?.status === 401 && !error.config?.url?.includes('/api/auth/me')) {
+        const requestUrl = String(error.config?.url || '');
+        const isAuthRoute = requestUrl.includes('/api/auth/');
+        const isSessionCheck = requestUrl.includes('/api/auth/me');
+
+        if (error.response?.status === 401 && !isAuthRoute && !isSessionCheck && typeof window !== 'undefined') {
+          this.removeToken();
+          this.removeUser();
           window.location.href = '/auth/login';
         }
         return Promise.reject(error);

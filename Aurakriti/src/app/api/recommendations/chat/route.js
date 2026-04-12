@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { requireRole } from '@/lib/api-auth';
 import connectDB from '@/lib/db';
 import Product from '@/models/Product';
 import { PRODUCT_CATEGORIES } from '@/lib/catalog';
+import productsData from '@/app/data/products.json';
 
 const JEWELLERY_CATEGORY_SET = new Set(PRODUCT_CATEGORIES.map((value) => String(value).toLowerCase()));
 
@@ -14,6 +14,8 @@ const STOP_WORDS = new Set([
 const NON_JEWELLERY_TERMS = new Set([
   'mobile', 'mobiles', 'phone', 'phones', 'laptop', 'tv', 'electronics', 'electronic', 'gadget', 'gadgets', 'other',
 ]);
+
+const CHATBOT_DEBUG_PREFIX = '[Chat Recommendations API]';
 
 function normalizeCategory(value = '') {
   const normalized = String(value).trim().toLowerCase();
@@ -31,6 +33,19 @@ const mapProduct = (product) => ({
   images: product.images ?? [],
   image: product.images?.[0] ?? '',
   stock: product.stock,
+});
+
+const mapFallbackProduct = (product) => ({
+  id: String(product.id),
+  title: product.name,
+  description: product.description,
+  price: product.price,
+  category: product.category,
+  rating: product.rating ?? 0,
+  tags: product.tags ?? [],
+  images: product.images ?? [],
+  image: product.images?.[0] ?? '',
+  stock: product.stock ?? 0,
 });
 
 function parseBudget(query) {
@@ -108,89 +123,176 @@ function buildReason(product, context) {
   return reasons.slice(0, 3);
 }
 
-export async function POST(request) {
-  try {
-    const auth = await requireRole(request, ['user']);
-    if (auth.error) return auth.error;
+const rankProducts = (products, context) =>
+  products
+    .map((product) => ({ product, score: scoreProduct(product, context) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 6)
+    .map(({ product, score }) => ({
+      ...product,
+      score,
+      reasons: buildReason(product, context),
+    }));
 
-    const body = await request.json();
+const parseJsonBodySafely = async (request) => {
+  try {
+    return await request.json();
+  } catch (error) {
+    console.error(`${CHATBOT_DEBUG_PREFIX} Failed to parse request JSON:`, error);
+    return null;
+  }
+};
+
+const buildContextFromQuery = (query) => ({
+  budget: parseBudget(query),
+  category: parseCategory(query),
+  keywords: parseKeywords(query),
+});
+
+const buildMongoQuery = (context) => {
+  const mongoQuery = {
+    isActive: true,
+    stock: { $gt: 0 },
+    category: { $in: Array.from(JEWELLERY_CATEGORY_SET) },
+  };
+
+  if (context.category) {
+    mongoQuery.category = context.category;
+  }
+
+  if (context.budget !== null) {
+    mongoQuery.price = { $lte: context.budget };
+  }
+
+  if (context.keywords.length) {
+    const tokenRegexes = context.keywords.map((keyword) => ({ $regex: keyword, $options: 'i' }));
+    mongoQuery.$or = [
+      { title: { $in: tokenRegexes } },
+      { description: { $in: tokenRegexes } },
+      { category: { $in: tokenRegexes } },
+      { tags: { $in: tokenRegexes } },
+    ];
+  }
+
+  return mongoQuery;
+};
+
+const getFallbackRecommendations = (context) => {
+  const fallbackProducts = Array.isArray(productsData?.products) ? productsData.products : [];
+  const normalizedFallback = fallbackProducts
+    .map(mapFallbackProduct)
+    .filter((product) => product.stock > 0 && JEWELLERY_CATEGORY_SET.has(String(product.category).toLowerCase()));
+  return rankProducts(normalizedFallback, context);
+};
+
+export async function POST(request) {
+  const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const token = request.cookies?.get('ecocommerce_auth')?.value;
+
+  console.log(`${CHATBOT_DEBUG_PREFIX} Request received`, {
+    requestId,
+    method: request.method,
+    url: request.url,
+    hasAuthToken: Boolean(token),
+    nodeEnv: process.env.NODE_ENV,
+    hasMongoUri: Boolean(process.env.MONGODB_URI),
+    hasJwtSecret: Boolean(process.env.JWT_SECRET),
+    hasPublicBaseUrl: Boolean(process.env.NEXT_PUBLIC_BASE_URL),
+  });
+
+  try {
+    const body = await parseJsonBodySafely(request);
+    console.log(`${CHATBOT_DEBUG_PREFIX} Request body`, { requestId, body });
+
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json(
+        { success: false, message: 'Invalid request body.', debugRequestId: requestId },
+        { status: 400 }
+      );
+    }
+
     const query = String(body.query || '').trim();
 
     if (!query) {
-      return NextResponse.json({ success: false, message: 'Query is required.' }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: 'Query is required.', debugRequestId: requestId },
+        { status: 400 }
+      );
     }
 
-    await connectDB();
+    const context = buildContextFromQuery(query);
+    const mongoQuery = buildMongoQuery(context);
+    console.log(`${CHATBOT_DEBUG_PREFIX} Parsed query context`, {
+      requestId,
+      parsed: context,
+      mongoQuery,
+    });
 
-    const budget = parseBudget(query);
-    const category = parseCategory(query);
-    const keywords = parseKeywords(query);
+    let ranked = [];
+    let dataSource = 'mongodb';
 
-    const mongoQuery = {
-      isActive: true,
-      stock: { $gt: 0 },
-      category: { $in: Array.from(JEWELLERY_CATEGORY_SET) },
-    };
+    try {
+      const dbConnection = await connectDB();
+      console.log(`${CHATBOT_DEBUG_PREFIX} DB connected`, {
+        requestId,
+        dbName: dbConnection?.connection?.name,
+        host: dbConnection?.connection?.host,
+      });
 
-    if (category) {
-      mongoQuery.category = category;
-    }
-
-    if (budget !== null) {
-      mongoQuery.price = { $lte: budget };
-    }
-
-    if (keywords.length) {
-      const tokenRegexes = keywords.map((keyword) => ({ $regex: keyword, $options: 'i' }));
-      mongoQuery.$or = [
-        { title: { $in: tokenRegexes } },
-        { description: { $in: tokenRegexes } },
-        { category: { $in: tokenRegexes } },
-        { tags: { $in: tokenRegexes } },
-      ];
-    }
-
-    let candidates = await Product.find(mongoQuery)
-      .sort({ rating: -1, createdAt: -1 })
-      .limit(60)
-      .lean();
-
-    if (!candidates.length) {
-      candidates = await Product.find({
-        isActive: true,
-        stock: { $gt: 0 },
-        category: { $in: Array.from(JEWELLERY_CATEGORY_SET) },
-      })
+      let candidates = await Product.find(mongoQuery)
         .sort({ rating: -1, createdAt: -1 })
-        .limit(20)
+        .limit(60)
         .lean();
+
+      if (!candidates.length) {
+        candidates = await Product.find({
+          isActive: true,
+          stock: { $gt: 0 },
+          category: { $in: Array.from(JEWELLERY_CATEGORY_SET) },
+        })
+          .sort({ rating: -1, createdAt: -1 })
+          .limit(20)
+          .lean();
+      }
+
+      const normalizedCandidates = candidates.map(mapProduct);
+      ranked = rankProducts(normalizedCandidates, context);
+    } catch (dbError) {
+      dataSource = 'fallback-json';
+      console.error(`${CHATBOT_DEBUG_PREFIX} DB flow failed; using fallback data`, {
+        requestId,
+        name: dbError?.name,
+        message: dbError?.message,
+      });
+      ranked = getFallbackRecommendations(context);
     }
 
-    const context = { budget, category, keywords };
-
-    const ranked = candidates
-      .map((product) => ({ product, score: scoreProduct(product, context) }))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 6)
-      .map(({ product, score }) => ({
-        ...mapProduct(product),
-        score,
-        reasons: buildReason(product, context),
-      }));
+    console.log(`${CHATBOT_DEBUG_PREFIX} Response ready`, {
+      requestId,
+      dataSource,
+      recommendationCount: ranked.length,
+    });
 
     return NextResponse.json({
       success: true,
       data: {
         query,
-        parsed: { budget, category, keywords },
+        parsed: context,
+        dataSource,
         recommendations: ranked,
         fallbackMessage: ranked.length ? null : 'No exact match found. Try a different jewellery query.',
       },
+      debugRequestId: requestId,
     });
   } catch (error) {
-    console.error('[Chat Recommendations] Error:', error);
+    console.error(`${CHATBOT_DEBUG_PREFIX} Fatal route error`, {
+      requestId,
+      name: error?.name,
+      message: error?.message,
+      stack: error?.stack,
+    });
     return NextResponse.json(
-      { success: false, message: 'Failed to get recommendations.' },
+      { success: false, message: error?.message || 'Failed to get recommendations.', debugRequestId: requestId },
       { status: 500 }
     );
   }

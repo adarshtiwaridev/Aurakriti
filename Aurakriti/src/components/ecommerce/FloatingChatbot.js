@@ -60,12 +60,41 @@ export default function FloatingChatbot() {
         credentials: 'include',
         body: JSON.stringify({ query: text }),
       });
-      const payload = await response.json();
-      if (!response.ok || !payload.success) {
-        throw new Error(payload.message || 'Unable to fetch recommendations');
+
+      console.log('[FloatingChatbot] STATUS:', response.status);
+
+      let payload = null;
+      let responseText = '';
+      try {
+        payload = await response.json();
+      } catch {
+        try {
+          responseText = await response.text();
+        } catch {
+          responseText = '';
+        }
+        payload = null;
       }
 
-      const recommendations = payload.data?.recommendations || [];
+      console.log('[FloatingChatbot] PAYLOAD:', payload);
+      if (!payload && responseText) {
+        console.log('[FloatingChatbot] RAW_RESPONSE_BODY:', responseText);
+      }
+
+      const backendMessage = String(payload?.message || '');
+      const isAuthError =
+        response.status === 401 ||
+        response.status === 403 ||
+        /unauthori[sz]ed|forbidden/i.test(backendMessage);
+
+      if (isAuthError) {
+        throw new Error('RECOMMENDATION_UNAVAILABLE');
+      }
+      if (!response.ok || !payload?.success) {
+        throw new Error('RECOMMENDATION_UNAVAILABLE');
+      }
+
+      const recommendations = payload?.data?.recommendations || [];
       setMessages((prev) => [
         ...prev,
         {
@@ -73,17 +102,17 @@ export default function FloatingChatbot() {
           role: 'assistant',
           text: recommendations.length
             ? `Here are ${recommendations.length} products you should consider.`
-            : payload.data?.fallbackMessage || 'No exact match found. Try a different query.',
+            : 'No exact match found. Try a different query.',
           recommendations,
         },
       ]);
-    } catch (error) {
+    } catch {
       setMessages((prev) => [
         ...prev,
         {
           id: `assistant-error-${Date.now()}`,
           role: 'assistant',
-          text: error.message || 'Recommendation service is unavailable right now.',
+          text: 'Recommendation service is unavailable right now. Please try again shortly.',
           recommendations: [],
         },
       ]);

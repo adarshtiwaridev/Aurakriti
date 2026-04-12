@@ -88,20 +88,22 @@ export const createErrorResponse = (message, data = {}, status = 400) =>
   );
 
 export const setAuthCookie = (response, token) => {
+  const isProduction = process.env.NODE_ENV === 'production';
   response.cookies.set(AUTH_COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     path: '/',
     maxAge: AUTH_COOKIE_MAX_AGE,
   });
 };
 
 export const clearAuthCookie = (response) => {
+  const isProduction = process.env.NODE_ENV === 'production';
   response.cookies.set(AUTH_COOKIE_NAME, '', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: isProduction,
+    sameSite: isProduction ? 'none' : 'lax',
     path: '/',
     maxAge: 0,
   });
@@ -112,6 +114,7 @@ const DEFAULT_ALLOWED_ORIGINS = [getAppUrl(), 'http://127.0.0.1:3000', 'http://l
 export const resolveAllowedOrigin = (request) => {
   const requestOrigin = request.headers.get('origin');
   const configuredOrigins = [
+    process.env.NEXT_PUBLIC_BASE_URL,
     process.env.NEXT_PUBLIC_APP_URL,
     process.env.NEXTAUTH_URL,
     process.env.NEXT_PUBLIC_API_URL,
