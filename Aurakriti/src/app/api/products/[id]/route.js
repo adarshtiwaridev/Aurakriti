@@ -85,6 +85,26 @@ export async function GET(request, context) {
     return NextResponse.json({ success: false, message: 'Product not found.' }, { status: 404 });
   }
 
+  // Legacy/demo id fallback: map JSON item to a real DB product when possible.
+  try {
+    await connectDB();
+    const mapped = await Product.findOne({
+      title: product.name,
+      category: product.category,
+      price: Number(product.price),
+      isActive: true,
+    }).lean();
+
+    if (mapped) {
+      return NextResponse.json({
+        success: true,
+        data: mapDbProduct(mapped),
+      });
+    }
+  } catch {
+    // continue with demo payload below
+  }
+
   return NextResponse.json({
     success: true,
     data: mapProduct(product),
