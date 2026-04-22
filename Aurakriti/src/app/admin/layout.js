@@ -36,7 +36,6 @@ export default function AdminLayout({ children }) {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
       <aside className="w-56 bg-white shadow-md flex flex-col">
         <div className="px-6 py-5 border-b">
           <h1 className="text-lg font-bold text-indigo-700">Admin Panel</h1>

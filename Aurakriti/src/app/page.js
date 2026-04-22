@@ -16,25 +16,40 @@ import { getProducts } from '@/services/productService';
 import { addToCart as addToCartRequest } from '@/services/cartService';
 import { useAuth } from '@/hooks/useAuth';
 
-// HD luxury jewellery fallback images shown while DB products load
+// HD luxury jewellery fallback images shown when no carousel items exist in DB
 const HD_HERO_FALLBACK = [
   {
     id: 'hd-1',
     image: 'https://images.unsplash.com/photo-1601121141461-9d6647bef0a0?w=1920&q=85&auto=format&fit=crop',
     title: 'Timeless Elegance',
     sub: 'Bridal jewellery crafted for your most cherished moments',
+    offerLabel: '',
+    offerPrice: null,
+    originalPrice: null,
+    productLink: '',
+    ctaText: 'Shop Now',
   },
   {
     id: 'hd-2',
     image: 'https://images.unsplash.com/photo-1573408301185-9519f94fdb85?w=1920&q=85&auto=format&fit=crop',
     title: 'Radiant by Design',
     sub: 'Discover our exclusive choker and necklace collections',
+    offerLabel: '',
+    offerPrice: null,
+    originalPrice: null,
+    productLink: '',
+    ctaText: 'Shop Now',
   },
   {
     id: 'hd-3',
     image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=1920&q=85&auto=format&fit=crop',
     title: 'Crafted with Passion',
     sub: 'Handmade pieces that celebrate modern grace',
+    offerLabel: '',
+    offerPrice: null,
+    originalPrice: null,
+    productLink: '',
+    ctaText: 'Shop Now',
   },
 ];
 
@@ -82,6 +97,7 @@ export default function HomePage() {
   const [heroIndex, setHeroIndex] = useState(0);
   const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' });
   const [trendingProducts, setTrendingProducts] = useState([]);
+  const [carouselItems, setCarouselItems] = useState([]);
 
   useEffect(() => {
     let active = true;
@@ -116,18 +132,50 @@ export default function HomePage() {
     return () => { active = false; };
   }, []);
 
-  // Hero slides: use product images when available, fall back to HD images
+  // Fetch dynamic carousel from backend
+  useEffect(() => {
+    fetch('/api/carousel')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success && data.data.items.length > 0) {
+          setCarouselItems(data.data.items);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Hero slides: DB carousel > product images > static fallback
   const heroSlides = useMemo(() => {
-    if (!products.length) return HD_HERO_FALLBACK;
-    const featured = products.filter((p) => p.isFeatured);
-    const source = featured.length ? featured : products;
-    return source.slice(0, 4).map((p) => ({
-      id: p.id,
-      image: p.image,
-      title: p.title,
-      sub: p.description || 'Handcrafted jewellery for your special day',
-    }));
-  }, [products]);
+    if (carouselItems.length > 0) {
+      return carouselItems.map((item) => ({
+        id: item._id,
+        image: item.image,
+        title: item.title,
+        sub: item.subtitle || '',
+        offerLabel: item.offerLabel || '',
+        offerPrice: item.offerPrice,
+        originalPrice: item.originalPrice,
+        productLink: item.productLink || '',
+        ctaText: item.ctaText || 'Shop Now',
+      }));
+    }
+    if (products.length > 0) {
+      const featured = products.filter((p) => p.isFeatured);
+      const source = featured.length ? featured : products;
+      return source.slice(0, 4).map((p) => ({
+        id: p.id,
+        image: p.image,
+        title: p.title,
+        sub: p.description || 'Handcrafted jewellery for your special day',
+        offerLabel: '',
+        offerPrice: null,
+        originalPrice: null,
+        productLink: '',
+        ctaText: 'Shop Now',
+      }));
+    }
+    return HD_HERO_FALLBACK;
+  }, [carouselItems, products]);
 
   // Auto-advance carousel
   useEffect(() => {
@@ -231,17 +279,40 @@ export default function HomePage() {
             className="max-w-2xl rounded-[2.6rem] border border-white/30 bg-white/75 p-8 backdrop-blur-sm sm:p-12 shadow-xl"
           >
             <p className="luxury-serif text-xs uppercase tracking-[0.45em] text-[#9b7a48]">Aurakriti Collection</p>
+
+            {/* Offer badge */}
+            {heroSlides[heroIndex]?.offerLabel && (
+              <span className="mt-3 inline-block rounded-full bg-[#c9a14a] px-4 py-1 text-xs font-bold uppercase tracking-widest text-white shadow">
+                {heroSlides[heroIndex].offerLabel}
+              </span>
+            )}
+
             <h1 className="luxury-serif mt-5 text-4xl leading-tight text-[#2f241b] sm:text-6xl">
               {heroSlides[heroIndex]?.title || 'Timeless Elegance'}
             </h1>
             <p className="mt-5 text-base leading-8 text-[#6b5645] sm:text-lg">
               {heroSlides[heroIndex]?.sub || 'Discover handcrafted jewellery designed for modern grace'}
             </p>
+
+            {/* Price display */}
+            {heroSlides[heroIndex]?.offerPrice != null && (
+              <div className="mt-4 flex items-baseline gap-3">
+                <span className="text-2xl font-bold text-[#c9a14a]">
+                  ₹{Number(heroSlides[heroIndex].offerPrice).toLocaleString('en-IN')}
+                </span>
+                {heroSlides[heroIndex]?.originalPrice != null && (
+                  <span className="text-base text-gray-400 line-through">
+                    ₹{Number(heroSlides[heroIndex].originalPrice).toLocaleString('en-IN')}
+                  </span>
+                )}
+              </div>
+            )}
+
             <a
-              href="#products"
+              href={heroSlides[heroIndex]?.productLink || '#products'}
               className="mt-8 inline-flex rounded-full bg-[#c9a14a] px-8 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-[#b88f37] shadow-lg"
             >
-              Shop Now
+              {heroSlides[heroIndex]?.ctaText || 'Shop Now'}
             </a>
           </motion.div>
         </div>
