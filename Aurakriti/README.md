@@ -16,6 +16,7 @@ This repository contains the full customer storefront, seller dashboard, AI reco
 - PDFKit
 - Razorpay
 - Framer Motion
+- Recharts
 - Zod
 
 ## Core Features
@@ -81,6 +82,106 @@ Aurakriti/
 - `search/` for search and image-based lookup
 - `upload/` for media upload support
 - `user/` for profile APIs
+- `admin/` for admin-only management APIs (users, products, orders, sellers, analytics, carousel)
+
+---
+
+## Admin Dashboard
+
+### Tech Used
+
+- **Backend:** Next.js API Routes, MongoDB/Mongoose, `requireRole(['admin'])` middleware
+- **Frontend:** React 19, Tailwind CSS 4, Recharts (charts)
+- **Auth:** JWT cookie-based sessions, role-based access control
+
+### Admin Pages
+
+| Route | Description |
+|---|---|
+| `/admin/dashboard` | Overview with live stats and navigation cards |
+| `/admin/users` | User table — edit roles, toggle verification, delete |
+| `/admin/sellers` | Seller list with revenue, product and order counts |
+| `/admin/products` | Product moderation — approve, deactivate, delete |
+| `/admin/orders` | All-platform orders — filter by status, update inline |
+| `/admin/analytics` | Revenue charts, user growth, top products/sellers |
+| `/admin/carousel` | Homepage carousel — create, edit, reorder, delete slides |
+
+### Admin API Routes
+
+All routes require `Authorization: Bearer <token>` with `role: admin`.
+
+#### Users — `/api/admin/users`
+
+| Method | Description | Key Params |
+|---|---|---|
+| `GET` | List all users | `page`, `limit`, `search`, `role`, `verified` |
+| `PATCH` | Update role or verification | `userId`, `role`, `isVerified` |
+| `DELETE` | Delete a user | `?userId=` |
+
+#### Products — `/api/admin/products`
+
+| Method | Description | Key Params |
+|---|---|---|
+| `GET` | List all products | `page`, `limit`, `search`, `category`, `isActive` |
+| `PATCH` | Approve / deactivate | `productId`, `isActive` |
+| `DELETE` | Remove a product | `?productId=` |
+
+#### Orders — `/api/admin/orders`
+
+| Method | Description | Key Params |
+|---|---|---|
+| `GET` | All platform orders | `page`, `limit`, `status`, `paymentStatus`, `search` |
+| `PATCH` | Update order status | `orderId`, `status` |
+
+#### Sellers — `/api/admin/sellers`
+
+| Method | Description | Key Params |
+|---|---|---|
+| `GET` | Seller list with stats | `page`, `limit`, `search`, `verified` |
+
+#### Analytics — `/api/admin/analytics`
+
+| Method | Description |
+|---|---|
+| `GET` | Revenue totals, order counts, top products, top sellers, daily revenue (30d), user growth (30d), order status breakdown |
+
+#### Carousel — `/api/admin/carousel`
+
+| Method | Description | Key Params |
+|---|---|---|
+| `GET` | All carousel items (admin) | — |
+| `POST` | Create slide | `title`, `image` (file or URL), `subtitle`, `offerLabel`, `offerPrice`, `originalPrice`, `productLink`, `ctaText`, `isActive`, `order` |
+| `PATCH` | Update slide | `id` + any fields above |
+| `DELETE` | Delete slide | `?id=` |
+
+#### Public Carousel — `/api/carousel`
+
+| Method | Description |
+|---|---|
+| `GET` | Active slides sorted by `order` (used by homepage) |
+
+### API Response Format
+
+All admin APIs return a consistent envelope:
+
+```json
+{
+  "success": true,
+  "data": {
+    "items": [],
+    "pagination": { "page": 1, "pages": 5, "total": 100, "limit": 20 }
+  }
+}
+```
+
+Error responses:
+
+```json
+{
+  "success": false,
+  "message": "Descriptive error message"
+}
+```
 
 ## Environment Variables
 
