@@ -11,7 +11,6 @@ const navItems = [
   { href: '/admin/sellers', label: 'Sellers', icon: '🏪' },
   { href: '/admin/products', label: 'Products', icon: '📦' },
   { href: '/admin/orders', label: 'Orders', icon: '🛒' },
-  { href: '/admin/carousel', label: 'Carousel', icon: '🖼️' },
   { href: '/admin/analytics', label: 'Analytics', icon: '📊' },
 ];
 
@@ -59,11 +58,16 @@ export default function AdminLayout({ children }) {
           ))}
         </nav>
         <div className="px-6 py-4 border-t">
-          <button onClick={logout} className="w-full text-sm text-red-600 hover:text-red-700 font-medium text-left">
+          <button
+            onClick={logout}
+            className="w-full text-sm text-red-600 hover:text-red-700 font-medium text-left"
+          >
             Logout
           </button>
         </div>
       </aside>
+
+      {/* Main */}
       <main className="flex-1 overflow-auto">{children}</main>
     </div>
   );
