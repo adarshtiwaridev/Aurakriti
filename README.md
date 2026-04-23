@@ -4,6 +4,10 @@ Aurakriti is a premium jewellery ecommerce platform built with Next.js 16 App Ro
 
 This repository contains the full customer storefront, seller dashboard, AI recommendation chatbot, cart and checkout flow, invoice generation, email notifications, and production-ready API routes.
 
+#Important
+
+if you fail hydration react fault just open local host in incognito mode becouse may you have extension install in browser  that make you code fault ....
+
 ## Tech Stack
 
 - Next.js 16.2.2 (App Router)
