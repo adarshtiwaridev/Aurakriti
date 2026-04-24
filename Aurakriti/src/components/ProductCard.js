@@ -6,10 +6,13 @@ import { useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { addToCompare, removeFromCompare } from '@/redux/slices/compareSlice';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
+import { Heart } from 'lucide-react';
+
 
 export default function ProductCard({ product, onAddToCart }) {
   const dispatch = useDispatch();
   const [showQuickView, setShowQuickView] = useState(false);
+  const [isWishlisted, setWishlisted] = useState(false);
   const compareItems = useSelector((state) => state.compare.items);
   const { addToViewed } = useRecentlyViewed();
   const productId = useMemo(() => String(product.id ?? product._id ?? ''), [product.id, product._id]);
@@ -66,16 +69,31 @@ export default function ProductCard({ product, onAddToCart }) {
             type="button"
             onClick={toggleCompare}
             title={isInCompare ? 'Remove from compare' : compareFull ? 'Max 4 products' : 'Add to compare'}
-            className={`absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-[#e7dbc8] bg-white text-[11px] font-black shadow-sm transition-all ${
-              isInCompare
-                ? 'border-transparent bg-[#c9a14a] text-white'
-                : compareFull
+            className={`absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-[#e7dbc8] bg-white text-[11px] font-black shadow-sm transition-all ${isInCompare
+              ? 'border-transparent bg-[#c9a14a] text-white'
+              : compareFull
                 ? 'cursor-not-allowed bg-[#f5efe5] text-[#b8a78b]'
                 : 'text-[#6f5c4a] hover:bg-[#fff4e6] hover:text-[#c9a14a]'
-            }`}
+              }`}
           >
             {isInCompare ? 'OK' : 'CP'}
           </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault(); 
+              setWishlisted(!isWishlisted);
+            }}
+            className="absolute right-4 bottom-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-md backdrop-blur-sm transition-all duration-300 hover:bg-white hover:scale-110 active:scale-90"
+          >
+            <Heart
+              size={20}
+              className={`transition-colors duration-300 ${isWishlisted ? 'fill-red-500 text-red-500' : 'text-[#6f5c4a]'
+                }`}
+            />
+          </button>
+
+
         </div>
 
         <div className="flex flex-1 flex-col p-6">
@@ -94,11 +112,10 @@ export default function ProductCard({ product, onAddToCart }) {
               type="button"
               onClick={() => onAddToCart(product)}
               disabled={product.isDemo}
-              className={`inline-flex w-full items-center justify-center rounded-full px-6 py-3 text-sm font-semibold uppercase tracking-[0.16em] transition ${
-                product.isDemo
-                  ? 'cursor-not-allowed bg-[#d9cab7] text-white'
-                  : 'bg-[#c9a14a] text-white hover:bg-[#b88f37]'
-              }`}
+              className={`inline-flex w-full items-center justify-center rounded-full px-6 py-3 text-sm font-semibold uppercase tracking-[0.16em] transition ${product.isDemo
+                ? 'cursor-not-allowed bg-[#d9cab7] text-white'
+                : 'bg-[#c9a14a] text-white hover:bg-[#b88f37]'
+                }`}
             >
               {product.isDemo ? 'Demo Product' : 'Add to Cart'}
             </button>
