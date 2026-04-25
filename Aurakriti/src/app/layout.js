@@ -1,23 +1,8 @@
-import { Plus_Jakarta_Sans, Inter } from "next/font/google";
 import { Providers } from "./providers";
-import Navbar from "@/components/Navbar";
+import Navbar from "../components/ecommerce/Navbar";
 import Footer from "@/components/Footer";
+import { getAppUrl, getAppUrlObject } from "@/lib/app-url";
 import "./globals.css";
-
-/* ── Fonts ─────────────────────────────────────────────────── */
-const plusJakarta = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  variable: "--font-display",
-  display: "swap",
-  weight: ["400", "500", "600", "700", "800"],
-});
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-body",
-  display: "swap",
-  weight: ["400", "500", "600", "700"],
-});
 
 /* ── Metadata ───────────────────────────────────────────────── */
 export const metadata = {
@@ -30,13 +15,11 @@ export const metadata = {
   keywords: ["ecommerce", "online shopping", "deals", "products", "brands"],
   authors: [{ name: "Aurakriti" }],
   creator: "Aurakriti",
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
-  ),
+  metadataBase: getAppUrlObject(),
   openGraph: {
     type: "website",
     locale: "en_IN",
-    url: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+    url: getAppUrl(),
     siteName: "Aurakriti",
     title: "Aurakriti — Shop Smarter, Live Better",
     description:
@@ -62,7 +45,7 @@ export const metadata = {
     shortcut: "/favicon-16x16.png",
     apple: "/apple-touch-icon.png",
   },
-  manifest: "/site.webmanifest",
+  manifest: "/manifest.json",
 };
 
 /* ── Viewport ───────────────────────────────────────────────── */
@@ -77,7 +60,6 @@ export default function RootLayout({ children }) {
   return (
     <html
       lang="en"
-      className={`${plusJakarta.variable} ${inter.variable}`}
       suppressHydrationWarning
     >
       <body

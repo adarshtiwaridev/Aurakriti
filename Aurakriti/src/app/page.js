@@ -1,5 +1,7 @@
-import HeroSection from "@/components/HeroSection";
-import { CategoryGrid, PromoBanner } from "@/components/CategorySection";
+"use client";
+
+// import HeroSection from "@/components/HeroSection";
+// import { CategoryGrid, PromoBanner } from "@/components/CategorySection";
 import ProductCard from "@/components/ProductCard";
 import Link from "next/link";
  
