@@ -257,12 +257,12 @@ export default function HomePage() {
         {heroSlides.map((slide, index) => (
           <div
             key={slide.id}
-            className={`absolute inset-0 transition-opacity duration-1000 ${index === heroIndex ? 'opacity-100' : 'opacity-0'}`}
+            className={`absolute inset-0 transition-opacity duration-[1500ms] ease-in-out ${index === heroIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
           >
             <img
               src={slide.image}
               alt={slide.title}
-              className="h-full w-full object-cover object-center"
+              className={`h-full w-full object-cover object-center transition-transform duration-[6000ms] ease-out ${index === heroIndex ? 'scale-105' : 'scale-100'}`}
               loading={index === 0 ? 'eager' : 'lazy'}
             />
             <div className="absolute inset-0 bg-gradient-to-b from-[#1a0e07]/55 via-[#2c1a0a]/25 to-[#fffcf8]" />
@@ -270,13 +270,13 @@ export default function HomePage() {
         ))}
 
         {/* Overlay card */}
-        <div className="relative z-10 mx-auto flex h-full max-w-7xl items-center px-6 pt-24 sm:px-10">
+        <div className="relative z-20 pointer-events-none mx-auto flex h-full max-w-7xl items-center px-6 pt-24 sm:px-10">
           <motion.div
             key={heroIndex}
-            initial={{ opacity: 0, y: 28 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7 }}
-            className="max-w-2xl rounded-[2.6rem] border border-white/30 bg-white/75 p-8 backdrop-blur-sm sm:p-12 shadow-xl"
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+            className="pointer-events-auto max-w-2xl rounded-[2.6rem] border border-white/30 bg-white/75 p-8 backdrop-blur-sm sm:p-12 shadow-xl"
           >
             <p className="luxury-serif text-xs uppercase tracking-[0.45em] text-[#9b7a48]">Aurakriti Collection</p>
 
@@ -322,7 +322,7 @@ export default function HomePage() {
           type="button"
           onClick={goToPrev}
           aria-label="Previous slide"
-          className="absolute left-4 top-1/2 z-20 -translate-y-1/2 flex h-12 w-12 items-center justify-center rounded-full bg-white/80 text-[#3d2f24] shadow-lg backdrop-blur-sm transition hover:bg-white hover:scale-110"
+          className="absolute left-4 top-1/2 z-30 -translate-y-1/2 flex h-12 w-12 items-center justify-center rounded-full bg-white/80 text-[#3d2f24] shadow-lg backdrop-blur-sm transition hover:bg-white hover:scale-110"
         >
           <ChevronLeft size={22} />
         </button>
@@ -330,13 +330,13 @@ export default function HomePage() {
           type="button"
           onClick={goToNext}
           aria-label="Next slide"
-          className="absolute right-4 top-1/2 z-20 -translate-y-1/2 flex h-12 w-12 items-center justify-center rounded-full bg-white/80 text-[#3d2f24] shadow-lg backdrop-blur-sm transition hover:bg-white hover:scale-110"
+          className="absolute right-4 top-1/2 z-30 -translate-y-1/2 flex h-12 w-12 items-center justify-center rounded-full bg-white/80 text-[#3d2f24] shadow-lg backdrop-blur-sm transition hover:bg-white hover:scale-110"
         >
           <ChevronRight size={22} />
         </button>
 
         {/* Dot indicators */}
-        <div className="absolute bottom-10 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2">
+        <div className="absolute bottom-10 left-1/2 z-30 flex -translate-x-1/2 items-center gap-2">
           {heroSlides.map((slide, index) => (
             <button
               key={slide.id}
