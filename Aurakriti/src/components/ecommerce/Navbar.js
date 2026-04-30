@@ -3,14 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { useSelector } from "react-redux";
+import { useAuth } from "@/hooks/useAuth";
+import { useCart } from "@/hooks/useCart";
 
 const NAV_LINKS = [
   { label: "Home",     href: "/" },
-  { label: "Shop",     href: "/products" },
-  { label: "Deals",    href: "/deals" },
-  { label: "Brands",   href: "/brands" },
+  { label: "Shop",     href: "/shop" },
+  { label: "Dashboard", href: "/user/dashboard", authOnly: true },
+  { label: "Orders",   href: "/user/orders", authOnly: true },
   { label: "About",    href: "/about" },
+  { label: "Contact",  href: "/contact" },
 ];
 
 export default function Navbar() {
@@ -19,15 +21,25 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen]   = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery]         = useState("");
+  const { cartCount } = useCart();
+  const { user, isAuthenticated, initialized, logout } = useAuth();
 
-  // Pull cart count from Redux (adjust selector to match your store shape)
-  const cartCount = useSelector(
-    (state) => state.cart?.items?.reduce((sum, i) => sum + i.quantity, 0) ?? 0
-  );
+  const dashboardHref = user?.role === "seller"
+    ? "/seller/dashboard"
+    : user?.role === "admin"
+      ? "/admin/dashboard"
+      : "/user/dashboard";
 
-  const notifCount = useSelector(
-    (state) => state.notifications?.unread ?? 0
-  );
+  const visibleNavLinks = NAV_LINKS.filter((link) => !link.authOnly || isAuthenticated);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setMenuOpen(false);
+    } catch {
+      // Keep UI responsive even if logout cleanup fails.
+    }
+  };
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 8);
@@ -63,12 +75,13 @@ export default function Navbar() {
 
             {/* Desktop nav */}
             <nav className="hidden md:flex items-center gap-1 flex-1">
-              {NAV_LINKS.map(({ label, href }) => {
-                const active = pathname === href;
+              {visibleNavLinks.map(({ label, href }) => {
+                const resolvedHref = label === "Dashboard" ? dashboardHref : href;
+                const active = pathname === resolvedHref;
                 return (
                   <Link
-                    key={href}
-                    href={href}
+                    key={label}
+                    href={resolvedHref}
                     className={`
                       px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
                       ${active
@@ -82,8 +95,7 @@ export default function Navbar() {
               })}
             </nav>
 
-            {/* Search bar — desktop */}
-            <div className="hidden md:flex items-center flex-1 max-w-sm">
+            <div className="hidden lg:flex items-center flex-1 max-w-sm">
               <div className="relative w-full">
                 <svg
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
@@ -96,68 +108,74 @@ export default function Navbar() {
                   placeholder="Search products, brands…"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  className="input pl-8 py-2 text-sm bg-gray-50 border-gray-200 focus:bg-white"
+                  className="input py-2 text-sm bg-gray-50 border-gray-200 focus:bg-white"
                   style={{ borderRadius: "var(--radius-full)", paddingLeft: "2rem" }}
                 />
               </div>
             </div>
 
-            {/* Right actions */}
-            <div className="flex items-center gap-1 ml-auto md:ml-0">
-
-              {/* Mobile search toggle */}
+            <div className="flex items-center gap-1 ml-auto">
               <button
-                className="md:hidden icon-btn"
+                className="lg:hidden icon-btn"
                 onClick={() => setSearchOpen((v) => !v)}
                 aria-label="Search"
               >
                 <SearchIcon />
               </button>
 
-              {/* Notifications */}
-              <Link href="/user/notifications" className="icon-btn relative" aria-label="Notifications">
-                <BellIcon />
-                {notifCount > 0 && (
-                  <span className="
-                    absolute -top-1 -right-1
-                    bg-red-500 text-white text-[9px] font-bold
-                    w-4 h-4 rounded-full flex items-center justify-center
-                  ">
-                    {notifCount > 9 ? "9+" : notifCount}
-                  </span>
-                )}
-              </Link>
+              {isAuthenticated ? (
+                <Link
+                  href={dashboardHref}
+                  className="hidden sm:inline-flex items-center rounded-full border border-indigo-100 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100"
+                >
+                  <DashboardIcon />
+                  <span className="ml-2">Dashboard</span>
+                </Link>
+              ) : null}
 
-              {/* Cart */}
-              <Link href="/cart" className="icon-btn relative" aria-label="Cart">
+              <Link href="/user/cart" className="icon-btn relative" aria-label="Cart">
                 <CartIcon />
                 {cartCount > 0 && (
                   <span className="
                     absolute -top-1 -right-1
                     bg-indigo-500 text-white text-[9px] font-bold
-                    w-4 h-4 rounded-full flex items-center justify-content-center
-                    flex items-center justify-center
+                    w-4 h-4 rounded-full flex items-center justify-center
                   ">
                     {cartCount > 9 ? "9+" : cartCount}
                   </span>
                 )}
               </Link>
 
-              {/* Auth */}
-              <Link
-                href="/auth/login"
-                className="hidden sm:inline-flex btn btn-primary btn-sm ml-2"
-              >
-                Sign in
-              </Link>
-              <Link
-                href="/auth/signup"
-                className="hidden sm:inline-flex btn btn-ghost btn-sm"
-              >
-                Register
-              </Link>
+              {initialized && isAuthenticated ? (
+                <>
+                  <span className="hidden xl:block px-3 text-sm font-medium text-slate-600">
+                    {user?.name || "Account"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="hidden sm:inline-flex btn btn-ghost btn-sm ml-2"
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/auth/login"
+                    className="hidden sm:inline-flex btn btn-primary btn-sm ml-2"
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    href="/auth/register"
+                    className="hidden sm:inline-flex btn btn-ghost btn-sm"
+                  >
+                    Register
+                  </Link>
+                </>
+              )}
 
-              {/* Hamburger — mobile */}
               <button
                 className="md:hidden icon-btn ml-1"
                 onClick={() => setMenuOpen((v) => !v)}
@@ -168,9 +186,8 @@ export default function Navbar() {
             </div>
           </div>
 
-          {/* Mobile search bar */}
           {searchOpen && (
-            <div className="md:hidden pb-3">
+            <div className="lg:hidden pb-3">
               <div className="relative">
                 <svg
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
@@ -183,35 +200,49 @@ export default function Navbar() {
                   placeholder="Search products…"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  className="input pl-8"
+                  className="input"
                   autoFocus
+                  style={{ paddingLeft: "2rem" }}
                 />
               </div>
             </div>
           )}
         </div>
 
-        {/* Mobile nav menu */}
         {menuOpen && (
           <div className="md:hidden border-t border-gray-100 bg-white">
             <nav className="section-container py-3 flex flex-col gap-1">
-              {NAV_LINKS.map(({ label, href }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  className={`
-                    px-4 py-2.5 rounded-lg text-sm font-medium transition-colors
-                    ${pathname === href
-                      ? "bg-indigo-50 text-indigo-600"
-                      : "text-gray-700 hover:bg-gray-100"}
-                  `}
-                >
-                  {label}
-                </Link>
-              ))}
+              {visibleNavLinks.map(({ label, href }) => {
+                const resolvedHref = label === "Dashboard" ? dashboardHref : href;
+                const active = pathname === resolvedHref;
+                return (
+                  <Link
+                    key={label}
+                    href={resolvedHref}
+                    className={`
+                      px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
+                      ${active
+                        ? "bg-indigo-50 text-indigo-600"
+                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"}
+                    `}
+                  >
+                    {label}
+                  </Link>
+                );
+              })}
               <hr className="my-1 border-gray-100" />
-              <Link href="/auth/login"  className="btn btn-primary btn-sm w-full justify-center mt-1">Sign in</Link>
-              <Link href="/auth/signup" className="btn btn-ghost btn-sm w-full justify-center mt-1">Register</Link>
+              {initialized && isAuthenticated ? (
+                <>
+                  <Link href={dashboardHref} className="btn btn-secondary btn-sm w-full justify-center mt-1">Open Dashboard</Link>
+                  <Link href="/user/cart" className="btn btn-ghost btn-sm w-full justify-center mt-1">View Cart</Link>
+                  <button type="button" onClick={handleLogout} className="btn btn-ghost btn-sm w-full justify-center mt-1">Logout</button>
+                </>
+              ) : (
+                <>
+                  <Link href="/auth/login" className="btn btn-primary btn-sm w-full justify-center mt-1">Login</Link>
+                  <Link href="/auth/register" className="btn btn-ghost btn-sm w-full justify-center mt-1">Register</Link>
+                </>
+              )}
             </nav>
           </div>
         )}
@@ -240,19 +271,20 @@ function SearchIcon() {
   );
 }
 
-function BellIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/>
-    </svg>
-  );
-}
-
 function CartIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
       <path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 001.95-1.51l1.65-8.49H6"/>
+    </svg>
+  );
+}
+
+function DashboardIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/>
+      <rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>
     </svg>
   );
 }

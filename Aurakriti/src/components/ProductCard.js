@@ -3,9 +3,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
-import { useDispatch } from "react-redux";
-// Adjust this import to match your actual Redux action
-// import { addToCart } from "@/redux/cartSlice";
 
 /**
  * ProductCard — generic, works for any product category.
@@ -15,40 +12,53 @@ import { useDispatch } from "react-redux";
  *    _id, name, price, originalPrice?, images[], category,
  *    rating, reviewCount, badge? ("sale"|"hot"|"new"), stock
  *  }
+ *  onAddToCart?: (product) => void | Promise<void>
  *  compact?: boolean  — smaller card for sidebar / related
  */
-export default function ProductCard({ product, compact = false }) {
-  const dispatch = useDispatch();
+export default function ProductCard({ product, compact = false, onAddToCart }) {
   const [added, setAdded] = useState(false);
   const [wishlisted, setWishlisted] = useState(false);
 
   const {
+    id,
     _id,
     name,
+    title,
     price,
     originalPrice,
     images,
+    image,
     category,
     rating = 0,
+    reviews,
     reviewCount = 0,
     badge,
     stock = 99,
   } = product;
+
+  const productId = id || _id;
+  const productTitle = name || title || "Product";
 
   const discount =
     originalPrice && originalPrice > price
       ? Math.round(((originalPrice - price) / originalPrice) * 100)
       : null;
 
-  const imgSrc = images?.[0] ?? null;
+  const imgSrc = images?.[0] ?? image ?? null;
   const outOfStock = stock === 0;
 
-  const handleAddToCart = (e) => {
+  const handleAddToCart = async (e) => {
     e.preventDefault();
-    if (outOfStock || added) return;
-    // dispatch(addToCart({ productId: _id, quantity: 1 }));
+    if (outOfStock || added || !onAddToCart) return;
+    await onAddToCart({
+      ...product,
+      id: productId,
+      title: productTitle,
+      name: productTitle,
+      image: imgSrc || "",
+    });
     setAdded(true);
-    setTimeout(() => setAdded(false), 2000);
+    window.setTimeout(() => setAdded(false), 1600);
   };
 
   const handleWishlist = (e) => {
@@ -58,7 +68,7 @@ export default function ProductCard({ product, compact = false }) {
 
   return (
     <Link
-      href={`/products/${_id}`}
+      href={`/products/${productId}`}
       className="block group"
       style={{ textDecoration: "none" }}
     >
@@ -75,6 +85,7 @@ export default function ProductCard({ product, compact = false }) {
             <Image
               src={imgSrc}
               alt={name}
+              alt={productTitle}
               fill
               sizes="(max-width: 768px) 50vw, 25vw"
               className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -126,14 +137,14 @@ export default function ProductCard({ product, compact = false }) {
             className="text-sm font-semibold text-gray-900 leading-tight line-clamp-2 flex-1"
             title={name}
           >
-            {name}
+            {productTitle}
           </h3>
 
           {/* Rating */}
-          {reviewCount > 0 && (
+          {(reviewCount || reviews) > 0 && (
             <div className="flex items-center gap-1">
               <StarRating rating={rating} />
-              <span className="text-[11px] text-gray-400">({reviewCount})</span>
+              <span className="text-[11px] text-gray-400">({reviewCount || reviews})</span>
             </div>
           )}
 

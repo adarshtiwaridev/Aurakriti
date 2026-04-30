@@ -3,9 +3,8 @@
 import Link from 'next/link';
 import { useCart } from '@/hooks/useCart';
 import { useDispatch } from 'react-redux';
-import { setCart } from '@/redux/slices/cartSlice';
+import { decrementQuantity, incrementQuantity, removeFromCart, setCart } from '@/redux/slices/cartSlice';
 import CartItem from '@/components/CartItem';
-import Navbar from '@/components/ecommerce/Navbar';
 import { ChevronLeft, ShoppingBag } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -32,12 +31,7 @@ export default function CartPage() {
       return;
     }
 
-    if (!isAuthenticated) {
-      router.replace('/auth/login?redirect=/user/cart');
-      return;
-    }
-
-    if (user?.role !== 'user') {
+    if (isAuthenticated && user?.role !== 'user') {
       router.replace(user?.role === 'seller' ? '/seller/dashboard' : '/admin/dashboard');
     }
   }, [initialized, isAuthenticated, router, user?.role]);
@@ -64,6 +58,11 @@ export default function CartPage() {
       return;
     }
 
+    if (!isAuthenticated || item.productId === item.id) {
+      dispatch(incrementQuantity(id));
+      return;
+    }
+
     syncCart(id, item.quantity + 1);
   };
 
@@ -73,10 +72,21 @@ export default function CartPage() {
       return;
     }
 
+    if (!isAuthenticated || item.productId === item.id) {
+      dispatch(decrementQuantity(id));
+      return;
+    }
+
     syncCart(id, item.quantity - 1);
   };
 
   const handleRemove = async (id, title) => {
+    if (!isAuthenticated || cartItems.find((item) => item.id === id)?.productId === id) {
+      dispatch(removeFromCart(id));
+      toast.success(`${title} removed from cart`);
+      return;
+    }
+
     setIsUpdating(true);
 
     try {
@@ -129,8 +139,7 @@ export default function CartPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#fffcf8] to-white">
-      <Navbar cartCount={cartItems.length} searchTerm="" onSearch={() => {}} />
-      <div className="mx-auto max-w-7xl px-4 py-8 pt-28 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         {/* Header */}
 <motion.div
   initial={{ opacity: 0, y: -30 }}
@@ -260,14 +269,16 @@ export default function CartPage() {
               </div>
 
               <Link
-                href="/user/checkout"
+                href={isAuthenticated ? "/user/checkout" : "/auth/login?redirect=/user/checkout"}
                 aria-disabled={isUpdating}
                 className="mt-8 block w-full rounded-full bg-[#c9a14a] px-5 py-4 text-center text-sm font-bold uppercase tracking-[0.18em] text-white shadow-lg shadow-[#c9a14a30] hover:bg-[#b88f37] transition-all hover:shadow-xl hover:shadow-[#c9a14a40] disabled:bg-[#d9cec1] disabled:text-[#9b7a48]"
               >
-                {isUpdating ? 'Updating...' : 'Proceed to Checkout'}
+                {isUpdating ? 'Updating...' : isAuthenticated ? 'Proceed to Checkout' : 'Login to Checkout'}
               </Link>
 
-              <p className="mt-4 text-center text-xs text-[#9b7a48]">🔒 Secure checkout</p>
+              <p className="mt-4 text-center text-xs text-[#9b7a48]">
+                {isAuthenticated ? '🔒 Secure checkout' : 'Sign in is required only when you place the order.'}
+              </p>
             </motion.aside>
           </motion.div>
         )}

@@ -4,13 +4,11 @@ import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import Navbar from '@/components/ecommerce/Navbar';
-import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/hooks/useAuth';
 import { getProduct } from '@/services/productService';
 import { addToCart as addToCartRequest } from '@/services/cartService';
 import { useDispatch } from 'react-redux';
-import { setCart } from '@/redux/slices/cartSlice';
+import { addToCart, setCart } from '@/redux/slices/cartSlice';
 
 function ProductDetailSkeleton() {
   return (
@@ -66,7 +64,6 @@ export default function ProductDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const dispatch = useDispatch();
-  const { cartCount } = useCart();
   const { isAuthenticated, user, initialized } = useAuth();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -109,24 +106,12 @@ export default function ProductDetailsPage() {
   }, [productId]);
 
   const handleAddToCart = async () => {
-    // Check if this is a demo product
-    if (product?.isDemo) {
-      setError('Demo products cannot be added to cart. Please connect to database for full functionality.');
-      return;
-    }
-
-    // Wait for auth initialization
     if (!initialized) {
       setError('Please wait while we verify your account...');
       return;
     }
 
-    if (!isAuthenticated) {
-      router.push('/auth/login');
-      return;
-    }
-
-    if (user?.role !== 'user') {
+    if (isAuthenticated && user?.role !== 'user') {
       setError('Seller accounts cannot buy products.');
       return;
     }
@@ -134,6 +119,19 @@ export default function ProductDetailsPage() {
     try {
       setAdding(true);
       setError('');
+      if (!isAuthenticated || product?.isDemo) {
+        dispatch(addToCart({
+          id: product.id,
+          productId: product.id,
+          title: product.title,
+          price: Number(product.price || 0),
+          image: product.images?.[0] || product.image || '',
+          category: product.category || '',
+          quantity: 1,
+        }));
+        return;
+      }
+
       const cart = await addToCartRequest(product.id, 1);
       dispatch(setCart(cart.items ?? []));
     } catch (err) {
@@ -148,8 +146,7 @@ export default function ProductDetailsPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Navbar cartCount={cartCount} searchTerm="" onSearch={() => {}} />
-      <main className="mx-auto max-w-6xl px-4 pb-16 pt-28 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
         <Link href="/" className="text-sm font-semibold text-slate-500 hover:text-slate-900">← Back to shopping</Link>
 
         {loading && <ProductDetailSkeleton />}
@@ -223,10 +220,10 @@ export default function ProductDetailsPage() {
               <div className="mt-6 flex flex-wrap gap-3">
                 <button
                   onClick={handleAddToCart}
-                  disabled={adding || product.stock === 0 || product?.isDemo}
+                  disabled={adding || product.stock === 0}
                   className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {adding ? 'Adding...' : product?.isDemo ? 'Demo Product' : 'Add to Cart'}
+                  {adding ? 'Adding...' : 'Add to Cart'}
                 </button>
                 <button
                   type="button"

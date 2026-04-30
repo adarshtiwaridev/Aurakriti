@@ -48,7 +48,7 @@ export default function ResetPasswordClient() {
       toast.error('Invalid reset link', {
         description: 'Please check your email for the correct reset link.',
       });
-      router.push('/auth/forgot-password');
+      router.push('/auth/login/forgot-password');
     }
   }, [token, router]);
 

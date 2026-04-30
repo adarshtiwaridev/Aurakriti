@@ -126,14 +126,7 @@ export default function Footer() {
                   <li key={label}>
                     <Link
                       href={href}
-                      style={{
-                        fontSize: "0.8125rem",
-                        color: "var(--gray-400)",
-                        textDecoration: "none",
-                        transition: "color 0.15s",
-                      }}
-                      onMouseEnter={(e) => (e.target.style.color = "#F1F5F9")}
-                      onMouseLeave={(e) => (e.target.style.color = "var(--gray-400)")}
+                      className="text-[0.8125rem] text-slate-400 no-underline transition-colors duration-150 hover:text-slate-100"
                     >
                       {label}
                     </Link>

@@ -2,6 +2,8 @@
 
 "use client";
 
+import ReduxProvider from "@/components/ReduxProvider";
+
 export function Providers({ children }) {
-  return children;
+  return <ReduxProvider>{children}</ReduxProvider>;
 }
