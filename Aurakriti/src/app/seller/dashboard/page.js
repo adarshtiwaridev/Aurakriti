@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useAuth } from '@/hooks/useAuth';
-import Navbar from '@/components/ecommerce/Navbar';
 import { PRODUCT_CATEGORIES } from '@/lib/catalog';
 import { createProduct, deleteProduct, getProducts, updateProduct } from '@/services/productService';
 import { getOrders, updateOrderStatus } from '@/services/orderService';
@@ -286,9 +285,7 @@ export default function SellerDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Navbar searchTerm="" onSearch={() => {}} cartCount={0} />
-
-      <main className="mx-auto max-w-7xl px-4 pb-16 pt-28 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-black text-slate-900">Seller Dashboard</h1>

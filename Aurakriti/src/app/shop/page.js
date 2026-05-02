@@ -3,14 +3,12 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useDispatch } from 'react-redux';
 import { useRouter } from 'next/navigation';
-import Navbar from '@/components/ecommerce/Navbar';
 import ProductCard from '@/components/ProductCard';
 import LoadingSkeleton from '@/components/ecommerce/LoadingSkeleton';
 import { useCart } from '@/hooks/useCart';
-import { setCart } from '@/redux/slices/cartSlice';
+import { addToCart, setCart } from '@/redux/slices/cartSlice';
 import { addToCart as addToCartRequest } from '@/services/cartService';
 import { useAuth } from '@/hooks/useAuth';
-import Footer from '@/app/main/footer';
 import { Search, Filter, X } from 'lucide-react';
 
 // Cache for products to avoid refetching
@@ -146,40 +144,39 @@ export default function ShopPage() {
   }, [products, activeCategory, debouncedSearchTerm, sortBy, priceRange]);
 
   const handleAddToCart = useCallback(async (product) => {
-    // Check if this is a demo product
-    if (product.isDemo) {
-      setToastMessage('Demo products cannot be added to cart. Please connect to database for full functionality.');
-      setTimeout(() => setToastMessage(''), 3000);
-      return;
-    }
-
-    // Wait for auth initialization
     if (!initialized) {
       setToastMessage('Please wait while we verify your account...');
       setTimeout(() => setToastMessage(''), 2000);
       return;
     }
 
-    if (!isAuthenticated) {
-      router.push('/auth/login');
-      return;
-    }
-
-    if (user?.role !== 'user') {
+    if (isAuthenticated && user?.role !== 'user') {
       setToastMessage('Seller accounts cannot buy products.');
       setTimeout(() => setToastMessage(''), 2200);
       return;
     }
 
     try {
-      const cart = await addToCartRequest(product.id, 1);
-      dispatch(setCart(cart.items ?? []));
+      if (!isAuthenticated || product.isDemo) {
+        dispatch(addToCart({
+          id: product.id,
+          productId: product.id,
+          title: product.name || product.title,
+          price: Number(product.price || 0),
+          image: product.images?.[0] || product.image || '',
+          category: product.category || '',
+          quantity: 1,
+        }));
+      } else {
+        const cart = await addToCartRequest(product.id, 1);
+        dispatch(setCart(cart.items ?? []));
+      }
       setToastMessage(`${product.name || product.title} added to cart`);
     } catch (error) {
       setToastMessage(error.message || 'Failed to add product to cart');
     }
     setTimeout(() => setToastMessage(''), 2200);
-  }, [isAuthenticated, user, router, dispatch, initialized]);
+  }, [dispatch, initialized, isAuthenticated, user]);
 
   const cartQuantity = useMemo(() => 
     cartItems.reduce((total, item) => total + item.quantity, 0),
@@ -188,9 +185,7 @@ export default function ShopPage() {
 
   return (
     <div className="min-h-screen bg-[#f8fafb] text-slate-900">
-      <Navbar cartCount={cartQuantity} searchTerm={searchTerm} onSearch={setSearchTerm} />
-      
-      <main className="pt-24 pb-20">
+      <main className="pb-20">
         {/* Page Header */}
         <div className="border-b border-slate-200 bg-white shadow-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -346,7 +341,6 @@ export default function ShopPage() {
         </div>
       )}
 
-      <Footer />
     </div>
   );
 }

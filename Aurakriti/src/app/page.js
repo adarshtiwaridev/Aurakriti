@@ -1,509 +1,812 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { motion } from 'framer-motion';
-import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import Navbar from '@/components/ecommerce/Navbar';
-import CategoryBar from '@/components/ecommerce/CategoryBar';
-import ProductCard from '@/components/ProductCard';
-import LoadingSkeleton from '@/components/ecommerce/LoadingSkeleton';
-import Footer from '@/app/main/footer';
-import { useCart } from '@/hooks/useCart';
-import { setCart } from '@/redux/slices/cartSlice';
-import { getProducts } from '@/services/productService';
-import { addToCart as addToCartRequest } from '@/services/cartService';
-import { useAuth } from '@/hooks/useAuth';
+import { useDeferredValue, useEffect, useState } from "react";
+import Link from "next/link";
+import { useDispatch } from "react-redux";
+import {
+  ArrowRight,
+  ChevronLeft,
+  ChevronRight,
+  Heart,
+  Search,
+  ShieldCheck,
+  ShoppingBag,
+  Sparkles,
+  Star,
+  Truck,
+} from "lucide-react";
+import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+import { addToCart, setCart } from "@/redux/slices/cartSlice";
+import { addToCart as addToCartRequest } from "@/services/cartService";
 
-// HD luxury jewellery fallback images shown when no carousel items exist in DB
-const HD_HERO_FALLBACK = [
+const heroSlides = [
   {
-    id: 'hd-1',
-    image: 'https://images.unsplash.com/photo-1601121141461-9d6647bef0a0?w=1920&q=85&auto=format&fit=crop',
-    title: 'Timeless Elegance',
-    sub: 'Bridal jewellery crafted for your most cherished moments',
-    offerLabel: '',
-    offerPrice: null,
-    originalPrice: null,
-    productLink: '',
-    ctaText: 'Shop Now',
+    id: 1,
+    eyebrow: "New Season Collection",
+    title: "Crafted pieces for everyday luxury",
+    description:
+      "Explore elevated essentials, artisan jewelry, and modern accessories designed to feel special from day to night.",
+    image:
+      "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?auto=format&fit=crop&w=1600&q=80",
+    primaryCta: { label: "Shop Collection", href: "/shop" },
+    secondaryCta: { label: "View Featured", href: "#featured-products" },
+    stat: "Up to 40% off curated arrivals",
   },
   {
-    id: 'hd-2',
-    image: 'https://images.unsplash.com/photo-1573408301185-9519f94fdb85?w=1920&q=85&auto=format&fit=crop',
-    title: 'Radiant by Design',
-    sub: 'Discover our exclusive choker and necklace collections',
-    offerLabel: '',
-    offerPrice: null,
-    originalPrice: null,
-    productLink: '',
-    ctaText: 'Shop Now',
+    id: 2,
+    eyebrow: "Wedding Edit",
+    title: "Statement designs for every celebration",
+    description:
+      "Discover heirloom-inspired styles, rich textures, and standout gifting picks for festive moments and special occasions.",
+    image:
+      "https://images.unsplash.com/photo-1522312346375-d1a52e2b99b3?auto=format&fit=crop&w=1600&q=80",
+    primaryCta: { label: "Explore Occasion Wear", href: "/shop" },
+    secondaryCta: { label: "Browse Categories", href: "#categories" },
+    stat: "Free gift wrap on premium orders",
   },
   {
-    id: 'hd-3',
-    image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=1920&q=85&auto=format&fit=crop',
-    title: 'Crafted with Passion',
-    sub: 'Handmade pieces that celebrate modern grace',
-    offerLabel: '',
-    offerPrice: null,
-    originalPrice: null,
-    productLink: '',
-    ctaText: 'Shop Now',
+    id: 3,
+    eyebrow: "Best Sellers",
+    title: "Top-rated favorites our customers keep reordering",
+    description:
+      "Find trending picks with polished finishes, versatile styling, and pricing that makes premium details easy to own.",
+    image:
+      "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=1600&q=80",
+    primaryCta: { label: "Shop Best Sellers", href: "/shop" },
+    secondaryCta: { label: "See Deals", href: "#promotions" },
+    stat: "4.8 average rating across featured picks",
   },
 ];
 
-const JEWELLERY_CATEGORIES = ['Choker', 'Necklace', 'Mangalsutra', 'Watch'];
+const categoryItems = [
+  {
+    id: 1,
+    name: "Necklaces",
+    description: "Layered chains, pendants, and timeless statement pieces.",
+    href: "/shop?category=necklaces",
+    image:
+      "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=900&q=80",
+  },
+  {
+    id: 2,
+    name: "Earrings",
+    description: "Studs, hoops, and occasion-ready sparkle for every mood.",
+    href: "/shop?category=earrings",
+    image:
+      "https://images.unsplash.com/photo-1635767798638-3e25273a8236?auto=format&fit=crop&w=900&q=80",
+  },
+  {
+    id: 3,
+    name: "Bracelets",
+    description: "Minimal cuffs and stackable designs with refined detail.",
+    href: "/shop?category=bracelets",
+    image:
+      "https://images.unsplash.com/photo-1617038220319-276d3cfab638?auto=format&fit=crop&w=900&q=80",
+  },
+  {
+    id: 4,
+    name: "Rings",
+    description: "Delicate bands and bold silhouettes made to stand out.",
+    href: "/shop?category=rings",
+    image:
+      "https://images.unsplash.com/photo-1601821765780-754fa98637c1?auto=format&fit=crop&w=900&q=80",
+  },
+];
 
-function normalizeCategory(category = '') {
-  const value = String(category).trim().toLowerCase();
-  if (value.includes('choker')) return 'Choker';
-  if (value.includes('necklace')) return 'Necklace';
-  if (value.includes('mangalsutra')) return 'Mangalsutra';
-  if (value.includes('watch')) return 'Watch';
-  return null;
-}
+const promoBanners = [
+  {
+    id: 1,
+    title: "Weekend Sale",
+    subtitle: "Save up to 60% on select handcrafted favorites.",
+    href: "/shop?sale=weekend",
+    tone: "from-amber-200 via-orange-100 to-white",
+  },
+  {
+    id: 2,
+    title: "New Customer Perk",
+    subtitle: "Get an extra 10% off your first order with instant checkout.",
+    href: "/signup",
+    tone: "from-emerald-200 via-teal-100 to-white",
+  },
+];
 
-function normalizeProduct(product = {}) {
-  const normalizedCategory = normalizeCategory(product.category);
-  if (!normalizedCategory) return null;
+const fallbackProducts = [
+  {
+    id: "p1",
+    name: "Celeste Pearl Necklace",
+    category: "Necklaces",
+    price: 2499,
+    originalPrice: 3199,
+    rating: 4.9,
+    reviews: 124,
+    badge: "Best Seller",
+    image:
+      "https://images.unsplash.com/photo-1611085583191-a3b181a88401?auto=format&fit=crop&w=900&q=80",
+  },
+  {
+    id: "p2",
+    name: "Aurelia Hoop Earrings",
+    category: "Earrings",
+    price: 1599,
+    originalPrice: 2199,
+    rating: 4.8,
+    reviews: 88,
+    badge: "Trending",
+    image:
+      "https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=900&q=80",
+  },
+  {
+    id: "p3",
+    name: "Mira Statement Ring",
+    category: "Rings",
+    price: 1899,
+    originalPrice: 2499,
+    rating: 4.7,
+    reviews: 63,
+    badge: "Limited",
+    image:
+      "https://images.unsplash.com/photo-1603974372039-adc49044b6bd?auto=format&fit=crop&w=900&q=80",
+  },
+  {
+    id: "p4",
+    name: "Sienna Charm Bracelet",
+    category: "Bracelets",
+    price: 1399,
+    originalPrice: 1899,
+    rating: 4.6,
+    reviews: 51,
+    badge: "New",
+    image:
+      "https://images.unsplash.com/photo-1573408301185-9146fe634ad0?auto=format&fit=crop&w=900&q=80",
+  },
+  {
+    id: "p5",
+    name: "Noor Layered Pendant",
+    category: "Necklaces",
+    price: 2199,
+    originalPrice: 2799,
+    rating: 4.8,
+    reviews: 95,
+    badge: "Editor's Pick",
+    image:
+      "https://images.unsplash.com/photo-1617038220319-276d3cfab638?auto=format&fit=crop&w=900&q=80",
+  },
+  {
+    id: "p6",
+    name: "Elara Stone Studs",
+    category: "Earrings",
+    price: 999,
+    originalPrice: 1499,
+    rating: 4.5,
+    reviews: 43,
+    badge: "Giftable",
+    image:
+      "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=900&q=80",
+  },
+  {
+    id: "p7",
+    name: "Ivy Gold Cuff",
+    category: "Bracelets",
+    price: 1799,
+    originalPrice: 2299,
+    rating: 4.7,
+    reviews: 58,
+    badge: "Popular",
+    image:
+      "https://images.unsplash.com/photo-1619119069152-a2b331eb392a?auto=format&fit=crop&w=900&q=80",
+  },
+  {
+    id: "p8",
+    name: "Solstice Halo Ring",
+    category: "Rings",
+    price: 2699,
+    originalPrice: 3499,
+    rating: 4.9,
+    reviews: 132,
+    badge: "Premium",
+    image:
+      "https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=900&q=80",
+  },
+];
 
-  const id = String(product.id ?? product._id ?? '');
-  if (!id) return null;
-
-  return {
-    ...product,
-    id,
-    title: product.title || product.name || 'Jewellery Piece',
-    image: product.image || product.images?.[0] || '',
-    category: normalizedCategory,
-    rating: Number(product.rating || 4.5),
-    isFeatured: Boolean(product.isFeatured),
-  };
-}
+const uspItems = [
+  {
+    id: 1,
+    icon: Truck,
+    title: "Fast delivery",
+    text: "Quick dispatch on ready-to-ship products.",
+  },
+  {
+    id: 2,
+    icon: ShieldCheck,
+    title: "Secure checkout",
+    text: "Protected payments and trusted order support.",
+  },
+  {
+    id: 3,
+    icon: Sparkles,
+    title: "Curated quality",
+    text: "Handpicked styles with premium finishing.",
+  },
+];
 
 export default function HomePage() {
-  const router = useRouter();
   const dispatch = useDispatch();
-  const { items: cartItems } = useCart();
-  const { isAuthenticated, user, initialized } = useAuth();
-
+  const [activeSlide, setActiveSlide] = useState(0);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
   const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeCategory, setActiveCategory] = useState('Choker');
-  const [toastMessage, setToastMessage] = useState('');
-  const [isAdding, setIsAdding] = useState(false);
-  const [heroIndex, setHeroIndex] = useState(0);
-  const [contactForm, setContactForm] = useState({ name: '', email: '', message: '' });
-  const [trendingProducts, setTrendingProducts] = useState([]);
-  const [carouselItems, setCarouselItems] = useState([]);
+  const deferredSearchTerm = useDeferredValue(searchTerm);
+  const { initialized, isAuthenticated, user } = useAuth();
 
   useEffect(() => {
-    let active = true;
+    const rotation = window.setInterval(() => {
+      setActiveSlide((current) => (current + 1) % heroSlides.length);
+    }, 5000);
+
+    return () => window.clearInterval(rotation);
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
 
     async function loadProducts() {
       try {
-        const data = await getProducts();
-        if (!active) return;
-        const normalized = (data.products ?? []).map(normalizeProduct).filter(Boolean);
-        setProducts(normalized);
-        // Use top-rated as trending
-        const sorted = [...normalized].sort((a, b) => (b.rating || 0) - (a.rating || 0));
-        setTrendingProducts(sorted.slice(0, 4));
-      } catch (error) {
-        try {
-          const data = await import('@/app/data/products.json');
-          const normalized = (data.products ?? [])
-            .map((item) => normalizeProduct({ ...item, isDemo: true }))
-            .filter(Boolean);
-          setProducts(normalized);
-          const sorted = [...normalized].sort((a, b) => (b.rating || 0) - (a.rating || 0));
-          setTrendingProducts(sorted.slice(0, 4));
-        } catch {
-          console.error('Failed to load jewellery products:', error);
+        const response = await fetch("/api/products?featured=true", {
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          throw new Error("Unable to fetch featured products");
+        }
+
+        const data = await response.json();
+        const items = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.products)
+            ? data.products
+            : [];
+
+        if (isMounted) {
+          setProducts(items.length > 0 ? normalizeProducts(items) : fallbackProducts.map((product) => ({ ...product, isDemo: true })));
+        }
+      } catch {
+        if (isMounted) {
+          setProducts(fallbackProducts.map((product) => ({ ...product, isDemo: true })));
         }
       } finally {
-        if (active) setLoading(false);
+        if (isMounted) {
+          window.setTimeout(() => {
+            setIsLoading(false);
+          }, 500);
+        }
       }
     }
 
     loadProducts();
-    return () => { active = false; };
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  // Fetch dynamic carousel from backend
-  useEffect(() => {
-    fetch('/api/carousel')
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.success && data.data.items.length > 0) {
-          setCarouselItems(data.data.items);
-        }
-      })
-      .catch(() => {});
-  }, []);
+  const filteredProducts = products.filter((product) => {
+    const query = deferredSearchTerm.trim().toLowerCase();
 
-  // Hero slides: DB carousel > product images > static fallback
-  const heroSlides = useMemo(() => {
-    if (carouselItems.length > 0) {
-      return carouselItems.map((item) => ({
-        id: item._id,
-        image: item.image,
-        title: item.title,
-        sub: item.subtitle || '',
-        offerLabel: item.offerLabel || '',
-        offerPrice: item.offerPrice,
-        originalPrice: item.originalPrice,
-        productLink: item.productLink || '',
-        ctaText: item.ctaText || 'Shop Now',
-      }));
+    if (!query) {
+      return true;
     }
-    if (products.length > 0) {
-      const featured = products.filter((p) => p.isFeatured);
-      const source = featured.length ? featured : products;
-      return source.slice(0, 4).map((p) => ({
-        id: p.id,
-        image: p.image,
-        title: p.title,
-        sub: p.description || 'Handcrafted jewellery for your special day',
-        offerLabel: '',
-        offerPrice: null,
-        originalPrice: null,
-        productLink: '',
-        ctaText: 'Shop Now',
-      }));
-    }
-    return HD_HERO_FALLBACK;
-  }, [carouselItems, products]);
 
-  // Auto-advance carousel
-  useEffect(() => {
-    if (heroSlides.length <= 1) return undefined;
-    const timer = setInterval(() => {
-      setHeroIndex((prev) => (prev + 1) % heroSlides.length);
-    }, 4500);
-    return () => clearInterval(timer);
-  }, [heroSlides.length]);
+    return (
+      product.name.toLowerCase().includes(query) ||
+      product.category.toLowerCase().includes(query)
+    );
+  });
 
-  const goToPrev = () => setHeroIndex((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
-  const goToNext = () => setHeroIndex((prev) => (prev + 1) % heroSlides.length);
-
-  const visibleProducts = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
-    const categoryFiltered = products.filter((p) => p.category === activeCategory);
-    const searchFiltered = categoryFiltered.filter((p) => {
-      if (!query) return true;
-      return (
-        String(p.title).toLowerCase().includes(query) ||
-        String(p.description || '').toLowerCase().includes(query)
-      );
-    });
-    const featured = searchFiltered.filter((p) => p.isFeatured);
-    const remaining = searchFiltered.filter((p) => !p.isFeatured);
-    return [...featured, ...remaining];
-  }, [activeCategory, products, searchTerm]);
-
-  const aboutImage = 'https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=1200&q=85&auto=format&fit=crop';
+  const currentSlide = heroSlides[activeSlide];
 
   const handleAddToCart = async (product) => {
-    if (product.isDemo) {
-      setToastMessage('Demo mode: connect database to place live orders.');
-      setTimeout(() => setToastMessage(''), 2500);
-      return;
-    }
     if (!initialized) {
-      setToastMessage('Verifying account, please wait...');
-      setTimeout(() => setToastMessage(''), 1800);
+      toast.info("We are still checking your session. Please try again.");
       return;
     }
-    if (!isAuthenticated) {
-      router.push('/auth/login');
+
+    if (isAuthenticated && user?.role !== "user") {
+      toast.error("Only customer accounts can add products for purchase.");
       return;
     }
-    if (user?.role !== 'user') {
-      setToastMessage('Only customer accounts can place jewellery orders.');
-      setTimeout(() => setToastMessage(''), 2200);
-      return;
-    }
+
     try {
-      setIsAdding(true);
-      const cart = await addToCartRequest(product.id, 1);
-      dispatch(setCart(cart.items ?? []));
-      setToastMessage(`${product.title} added to cart ✓`);
+      if (!isAuthenticated || product.isDemo) {
+        dispatch(addToCart({
+          id: product.id,
+          productId: product.id,
+          title: product.name,
+          price: Number(product.price || 0),
+          image: product.image || "",
+          category: product.category || "",
+          quantity: 1,
+        }));
+      } else {
+        const cart = await addToCartRequest(product.id, 1);
+        dispatch(setCart(cart.items ?? []));
+      }
+
+      toast.success(`${product.name} added to cart`);
     } catch (error) {
-      setToastMessage(error.message || 'Unable to add product to cart');
-    } finally {
-      setIsAdding(false);
-      setTimeout(() => setToastMessage(''), 2200);
+      toast.error(error.message || "Unable to add product to cart");
     }
   };
-
-  const handleContactSubmit = (event) => {
-    event.preventDefault();
-    setToastMessage('Thank you! Our jewellery consultant will contact you shortly.');
-    setContactForm({ name: '', email: '', message: '' });
-    setTimeout(() => setToastMessage(''), 2600);
-  };
-
-  const cartQuantity = cartItems.reduce((total, item) => total + item.quantity, 0);
 
   return (
-    <div className="min-h-screen bg-[#fffcf8] text-[#3d2f24]">
-      <Navbar cartCount={cartQuantity} searchTerm={searchTerm} onSearch={setSearchTerm} />
-
-      {/* ── Hero Carousel ── */}
-      <section className="relative h-screen overflow-hidden">
-        {heroSlides.map((slide, index) => (
-          <div
-            key={slide.id}
-            className={`absolute inset-0 transition-opacity duration-[1500ms] ease-in-out ${index === heroIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}
-          >
-            <img
-              src={slide.image}
-              alt={slide.title}
-              className={`h-full w-full object-cover object-center transition-transform duration-[6000ms] ease-out ${index === heroIndex ? 'scale-105' : 'scale-100'}`}
-              loading={index === 0 ? 'eager' : 'lazy'}
-            />
-            <div className="absolute inset-0 bg-gradient-to-b from-[#1a0e07]/55 via-[#2c1a0a]/25 to-[#fffcf8]" />
-          </div>
-        ))}
-
-        {/* Overlay card */}
-        <div className="relative z-20 pointer-events-none mx-auto flex h-full max-w-7xl items-center px-6 pt-24 sm:px-10">
-          <motion.div
-            key={heroIndex}
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-            className="pointer-events-auto max-w-2xl rounded-[2.6rem] border border-white/30 bg-white/75 p-8 backdrop-blur-sm sm:p-12 shadow-xl"
-          >
-            <p className="luxury-serif text-xs uppercase tracking-[0.45em] text-[#9b7a48]">Aurakriti Collection</p>
-
-            {/* Offer badge */}
-            {heroSlides[heroIndex]?.offerLabel && (
-              <span className="mt-3 inline-block rounded-full bg-[#c9a14a] px-4 py-1 text-xs font-bold uppercase tracking-widest text-white shadow">
-                {heroSlides[heroIndex].offerLabel}
-              </span>
-            )}
-
-            <h1 className="luxury-serif mt-5 text-4xl leading-tight text-[#2f241b] sm:text-6xl">
-              {heroSlides[heroIndex]?.title || 'Timeless Elegance'}
-            </h1>
-            <p className="mt-5 text-base leading-8 text-[#6b5645] sm:text-lg">
-              {heroSlides[heroIndex]?.sub || 'Discover handcrafted jewellery designed for modern grace'}
-            </p>
-
-            {/* Price display */}
-            {heroSlides[heroIndex]?.offerPrice != null && (
-              <div className="mt-4 flex items-baseline gap-3">
-                <span className="text-2xl font-bold text-[#c9a14a]">
-                  ₹{Number(heroSlides[heroIndex].offerPrice).toLocaleString('en-IN')}
-                </span>
-                {heroSlides[heroIndex]?.originalPrice != null && (
-                  <span className="text-base text-gray-400 line-through">
-                    ₹{Number(heroSlides[heroIndex].originalPrice).toLocaleString('en-IN')}
-                  </span>
-                )}
-              </div>
-            )}
-
-            <a
-              href={heroSlides[heroIndex]?.productLink || '#products'}
-              className="mt-8 inline-flex rounded-full bg-[#c9a14a] px-8 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-[#b88f37] shadow-lg"
+    <div className="bg-stone-50 text-stone-900">
+      <section className="relative overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.20),_transparent_28%),linear-gradient(135deg,_#1c1917_0%,_#292524_40%,_#44403c_100%)] text-white">
+        <div className="absolute inset-0 bg-black/20" />
+        <div className="absolute inset-0">
+          {heroSlides.map((slide, index) => (
+            <div
+              key={slide.id}
+              className={`absolute inset-0 transition-all duration-700 ${
+                index === activeSlide
+                  ? "scale-100 opacity-100"
+                  : "scale-105 opacity-0"
+              }`}
             >
-              {heroSlides[heroIndex]?.ctaText || 'Shop Now'}
-            </a>
-          </motion.div>
+              <div
+                className="absolute inset-0 bg-cover bg-center"
+                style={{ backgroundImage: `url("${slide.image}")` }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-black/10" />
+            </div>
+          ))}
         </div>
 
-        {/* Arrow navigation */}
-        <button
-          type="button"
-          onClick={goToPrev}
-          aria-label="Previous slide"
-          className="absolute left-4 top-1/2 z-30 -translate-y-1/2 flex h-12 w-12 items-center justify-center rounded-full bg-white/80 text-[#3d2f24] shadow-lg backdrop-blur-sm transition hover:bg-white hover:scale-110"
-        >
-          <ChevronLeft size={22} />
-        </button>
-        <button
-          type="button"
-          onClick={goToNext}
-          aria-label="Next slide"
-          className="absolute right-4 top-1/2 z-30 -translate-y-1/2 flex h-12 w-12 items-center justify-center rounded-full bg-white/80 text-[#3d2f24] shadow-lg backdrop-blur-sm transition hover:bg-white hover:scale-110"
-        >
-          <ChevronRight size={22} />
-        </button>
+        <div className="section-container relative z-10 grid min-h-[calc(100vh-4rem)] items-center gap-10 py-16 lg:grid-cols-[1.15fr_0.85fr] lg:py-20">
+          <div className="max-w-2xl">
+            <span className="inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-white/90 backdrop-blur">
+              {currentSlide.eyebrow}
+            </span>
+            <h1 className="mt-6 max-w-xl text-4xl font-semibold leading-tight sm:text-5xl lg:text-6xl">
+              {currentSlide.title}
+            </h1>
+            <p className="mt-5 max-w-2xl text-base text-stone-200 sm:text-lg">
+              {currentSlide.description}
+            </p>
 
-        {/* Dot indicators */}
-        <div className="absolute bottom-10 left-1/2 z-30 flex -translate-x-1/2 items-center gap-2">
-          {heroSlides.map((slide, index) => (
-            <button
-              key={slide.id}
-              type="button"
-              onClick={() => setHeroIndex(index)}
-              className={`h-2.5 rounded-full transition-all duration-300 ${heroIndex === index ? 'w-9 bg-[#c9a14a]' : 'w-2.5 bg-white/60'}`}
-              aria-label={`Go to slide ${index + 1}`}
-            />
-          ))}
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Link
+                href={currentSlide.primaryCta.href}
+                className="inline-flex items-center justify-center rounded-full bg-amber-400 px-6 py-3 text-sm font-semibold text-stone-950 transition hover:bg-amber-300"
+              >
+                {currentSlide.primaryCta.label}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+              <Link
+                href={currentSlide.secondaryCta.href}
+                className="inline-flex items-center justify-center rounded-full border border-white/25 bg-white/10 px-6 py-3 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/20"
+              >
+                {currentSlide.secondaryCta.label}
+              </Link>
+            </div>
+
+            <div className="mt-8 flex flex-wrap items-center gap-4 text-sm text-stone-200">
+              <span className="rounded-full bg-white/10 px-4 py-2 backdrop-blur">
+                {currentSlide.stat}
+              </span>
+              <span>Premium packaging</span>
+              <span>COD available</span>
+            </div>
+          </div>
+
+          <div className="rounded-[2rem] border border-white/15 bg-white/10 p-4 shadow-2xl backdrop-blur md:p-6">
+            <div className="rounded-[1.5rem] bg-white p-5 text-stone-900 md:p-6">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-stone-500">
+                    Find your next favorite
+                  </p>
+                  <h2 className="mt-1 text-2xl font-semibold">
+                    Shop the home edit
+                  </h2>
+                </div>
+                <div className="rounded-full bg-stone-100 p-3">
+                  <ShoppingBag className="h-5 w-5 text-stone-700" />
+                </div>
+              </div>
+
+              <div className="mt-6 rounded-2xl border border-stone-200 bg-stone-50 p-3">
+                <label
+                  htmlFor="product-search"
+                  className="mb-2 block text-sm font-medium text-stone-600"
+                >
+                  Search featured products
+                </label>
+                <div className="flex items-center gap-3 rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-stone-200">
+                  <Search className="h-4 w-4 text-stone-400" />
+                  <input
+                    id="product-search"
+                    type="text"
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                    placeholder="Search necklaces, rings, earrings..."
+                    className="w-full border-0 bg-transparent text-sm outline-none placeholder:text-stone-400"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                {uspItems.map((item) => {
+                  const Icon = item.icon;
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="rounded-2xl border border-stone-200 bg-white p-4"
+                    >
+                      <div className="inline-flex rounded-full bg-amber-100 p-2 text-amber-700">
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <h3 className="mt-3 text-sm font-semibold text-stone-900">
+                        {item.title}
+                      </h3>
+                      <p className="mt-1 text-sm text-stone-500">{item.text}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="section-container relative z-10 pb-10">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              {heroSlides.map((slide, index) => (
+                <button
+                  key={slide.id}
+                  type="button"
+                  onClick={() => setActiveSlide(index)}
+                  aria-label={`Go to slide ${index + 1}`}
+                  className={`h-2.5 rounded-full transition-all ${
+                    index === activeSlide
+                      ? "w-10 bg-amber-400"
+                      : "w-2.5 bg-white/45 hover:bg-white/70"
+                  }`}
+                />
+              ))}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <CarouselButton
+                label="Previous slide"
+                onClick={() =>
+                  setActiveSlide(
+                    (current) =>
+                      (current - 1 + heroSlides.length) % heroSlides.length,
+                  )
+                }
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </CarouselButton>
+              <CarouselButton
+                label="Next slide"
+                onClick={() =>
+                  setActiveSlide((current) => (current + 1) % heroSlides.length)
+                }
+              >
+                <ChevronRight className="h-5 w-5" />
+              </CarouselButton>
+            </div>
+          </div>
         </div>
       </section>
 
-      <main className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-        {/* ── Categories ── */}
-        <section className="mb-12">
-          <div className="mb-6 flex items-end justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-[#9f7a40]">Jewellery Categories</p>
-              <h2 className="luxury-serif mt-3 text-3xl text-[#2f241b] sm:text-4xl">Crafted for every moment</h2>
-            </div>
-            <p className="text-sm text-[#7b6652]">{visibleProducts.length} designs</p>
-          </div>
-          <CategoryBar categories={JEWELLERY_CATEGORIES} activeCategory={activeCategory} onChange={setActiveCategory} />
-        </section>
+      <section className="border-y border-stone-200 bg-white/80">
+        <div className="section-container grid gap-4 py-5 sm:grid-cols-3">
+          {uspItems.map((item) => {
+            const Icon = item.icon;
 
-        {/* ── Products Grid ── */}
-        <section id="products" className="mb-16">
-          <div className="mb-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-[#9f7a40]">Featured Products</p>
-            <h3 className="luxury-serif mt-3 text-3xl text-[#2f241b] sm:text-4xl">{activeCategory} Highlights</h3>
-          </div>
-
-          {loading ? (
-            <LoadingSkeleton />
-          ) : visibleProducts.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-[#e4d7c2] bg-white p-10 text-center text-[#7e6956]">
-              No jewellery found for this category.
-            </div>
-          ) : (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {visibleProducts.slice(0, 8).map((product) => (
-                <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} />
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* ── Trending / Recommendations ── */}
-        {trendingProducts.length > 0 && (
-          <motion.section
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.2 }}
-            transition={{ duration: 0.6 }}
-            className="mb-16"
-          >
-            <div className="mb-8 flex items-end justify-between">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.35em] text-[#9f7a40]">Trending Now</p>
-                <h3 className="luxury-serif mt-3 text-3xl text-[#2f241b] sm:text-4xl">You May Also Love</h3>
+            return (
+              <div key={item.id} className="flex items-center gap-4">
+                <div className="rounded-full bg-stone-100 p-3">
+                  <Icon className="h-5 w-5 text-stone-700" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-stone-900">{item.title}</h3>
+                  <p className="text-sm text-stone-500">{item.text}</p>
+                </div>
               </div>
-              <a href="/shop" className="text-sm font-semibold text-[#c9a14a] hover:text-[#b88f37] transition">
-                View All →
-              </a>
-            </div>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {trendingProducts.map((product) => (
-                <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} />
-              ))}
-            </div>
-          </motion.section>
-        )}
-
-        {/* ── About Section ── */}
-        <motion.section
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.7 }}
-          className="mb-16 grid gap-8 overflow-hidden rounded-[2.5rem] bg-[#f9f0e3] lg:grid-cols-2"
-        >
-          <div className="relative overflow-hidden min-h-80">
-            <img
-              src={aboutImage}
-              alt="Aurakriti jewellery craftsmanship"
-              className="h-full w-full object-cover object-center min-h-80"
-              loading="lazy"
-            />
-          </div>
-          <div className="flex flex-col justify-center p-8 sm:p-10">
-            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-[#9f7a40]">About Aurakriti</p>
-            <h3 className="luxury-serif mt-4 text-3xl text-[#2f241b] sm:text-4xl">Timeless artistry, modern grace</h3>
-            <p className="mt-6 text-base leading-8 text-[#6b5645]">
-              Aurakriti brings timeless jewellery crafted with passion and precision. Each piece reflects elegance,
-              tradition, and modern beauty — designed for life&apos;s most special moments.
-            </p>
-            <a
-              href="/about"
-              className="mt-8 inline-flex self-start rounded-full border-2 border-[#c9a14a] px-7 py-3 text-sm font-semibold text-[#c9a14a] transition hover:bg-[#c9a14a] hover:text-white"
-            >
-              Our Story
-            </a>
-          </div>
-        </motion.section>
-
-        {/* ── Contact Section ── */}
-        <motion.section
-          id="contact"
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.7 }}
-          className="rounded-[2.5rem] border border-[#eadfce] bg-white p-6 shadow-[0_20px_70px_-45px_rgba(147,112,43,0.3)] sm:p-10"
-        >
-          <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-[#9f7a40]">Contact Us</p>
-              <h3 className="luxury-serif mt-3 text-3xl text-[#2f241b] sm:text-4xl">Book a jewellery consultation</h3>
-            </div>
-            <div className="text-sm text-[#7b6652]">
-              <p>hello@aurakriti.com</p>
-              <p>+91 98765 43210</p>
-            </div>
-          </div>
-
-          <form onSubmit={handleContactSubmit} className="grid gap-4 md:grid-cols-2">
-            <input
-              type="text"
-              placeholder="Your Name"
-              value={contactForm.name}
-              onChange={(event) => setContactForm((prev) => ({ ...prev, name: event.target.value }))}
-              className="h-12 rounded-2xl border border-[#eadfce] bg-[#fffdfa] px-4 text-sm text-[#4b3a2e] outline-none transition focus:border-[#c9a14a] focus:ring-4 focus:ring-[#c9a14a1f]"
-              required
-            />
-            <input
-              type="email"
-              placeholder="Your Email"
-              value={contactForm.email}
-              onChange={(event) => setContactForm((prev) => ({ ...prev, email: event.target.value }))}
-              className="h-12 rounded-2xl border border-[#eadfce] bg-[#fffdfa] px-4 text-sm text-[#4b3a2e] outline-none transition focus:border-[#c9a14a] focus:ring-4 focus:ring-[#c9a14a1f]"
-              required
-            />
-            <textarea
-              rows={4}
-              placeholder="Your Message"
-              value={contactForm.message}
-              onChange={(event) => setContactForm((prev) => ({ ...prev, message: event.target.value }))}
-              className="rounded-2xl border border-[#eadfce] bg-[#fffdfa] px-4 py-3 text-sm text-[#4b3a2e] outline-none transition focus:border-[#c9a14a] focus:ring-4 focus:ring-[#c9a14a1f] resize-none md:col-span-2"
-              required
-            />
-            <button
-              type="submit"
-              className="md:col-span-2 inline-flex h-12 w-full items-center justify-center rounded-full bg-[#c9a14a] text-sm font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-[#b88f37] shadow-md hover:shadow-lg"
-            >
-              Send Message
-            </button>
-          </form>
-        </motion.section>
-      </main>
-
-      <Footer />
-
-      {toastMessage ? (
-        <div className="fixed bottom-6 left-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 rounded-3xl bg-[#3d3024] px-6 py-4 text-center text-sm font-semibold text-white shadow-2xl">
-          {isAdding ? 'Adding to cart...' : toastMessage}
+            );
+          })}
         </div>
-      ) : null}
+      </section>
+
+      <main className="pb-20">
+        <section id="categories" className="section-container py-16 sm:py-20">
+          <SectionHeader
+            eyebrow="Shop By Category"
+            title="Designed to match every mood and moment"
+            description="Browse polished essentials, gifting favorites, and new arrivals curated for a modern storefront experience."
+            actionHref="/shop"
+            actionLabel="View all categories"
+          />
+
+          <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+            {categoryItems.map((category) => (
+              <Link
+                key={category.id}
+                href={category.href}
+                className="group overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"
+              >
+                <div
+                  className="h-72 bg-cover bg-center transition duration-500 group-hover:scale-105"
+                  style={{ backgroundImage: `url("${category.image}")` }}
+                />
+                <div className="p-6">
+                  <div className="flex items-center justify-between gap-4">
+                    <h3 className="text-xl font-semibold text-stone-900">
+                      {category.name}
+                    </h3>
+                    <ArrowRight className="h-5 w-5 text-stone-400 transition group-hover:translate-x-1 group-hover:text-stone-900" />
+                  </div>
+                  <p className="mt-3 text-sm leading-6 text-stone-500">
+                    {category.description}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section id="promotions" className="section-container py-4 sm:py-6">
+          <div className="grid gap-5 lg:grid-cols-2">
+            {promoBanners.map((banner) => (
+              <Link
+                key={banner.id}
+                href={banner.href}
+                className={`group overflow-hidden rounded-[2rem] border border-stone-200 bg-gradient-to-br ${banner.tone} p-8 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl`}
+              >
+                <div className="flex h-full flex-col justify-between gap-8">
+                  <div>
+                    <span className="inline-flex rounded-full bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-stone-700">
+                      Limited Offer
+                    </span>
+                    <h3 className="mt-5 max-w-sm text-3xl font-semibold tracking-tight text-stone-900">
+                      {banner.title}
+                    </h3>
+                    <p className="mt-3 max-w-md text-sm leading-6 text-stone-600">
+                      {banner.subtitle}
+                    </p>
+                  </div>
+                  <div className="inline-flex items-center text-sm font-semibold text-stone-900">
+                    Shop now
+                    <ArrowRight className="ml-2 h-4 w-4 transition group-hover:translate-x-1" />
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section
+          id="featured-products"
+          className="section-container pt-16 sm:pt-20"
+        >
+          <SectionHeader
+            eyebrow="Featured Products"
+            title="Best-selling styles customers love right now"
+            description="A responsive, production-safe product grid with loading states, clean interactions, and fallback data when APIs are unavailable."
+            actionHref="/shop"
+            actionLabel="Browse all products"
+          />
+
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-[1.5rem] border border-stone-200 bg-white p-4 shadow-sm">
+            <p className="text-sm text-stone-500">
+              Showing{" "}
+              <span className="font-semibold text-stone-900">
+                {isLoading ? 8 : filteredProducts.length}
+              </span>{" "}
+              featured items
+            </p>
+            {deferredSearchTerm ? (
+              <button
+                type="button"
+                onClick={() => setSearchTerm("")}
+                className="rounded-full border border-stone-200 px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-100"
+              >
+                Clear search
+              </button>
+            ) : null}
+          </div>
+
+          <div className="mt-8 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+            {isLoading
+              ? Array.from({ length: 8 }).map((_, index) => (
+                  <ProductCardSkeleton key={index} />
+                ))
+              : filteredProducts.map((product) => (
+                  <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} />
+                ))}
+          </div>
+
+          {!isLoading && filteredProducts.length === 0 ? (
+            <div className="mt-8 rounded-[1.75rem] border border-dashed border-stone-300 bg-white p-10 text-center shadow-sm">
+              <p className="text-lg font-semibold text-stone-900">
+                No products matched your search
+              </p>
+              <p className="mt-2 text-sm text-stone-500">
+                Try a different keyword or clear the search to see all featured
+                items.
+              </p>
+            </div>
+          ) : null}
+        </section>
+      </main>
     </div>
   );
+}
+
+function SectionHeader({
+  eyebrow,
+  title,
+  description,
+  actionHref,
+  actionLabel,
+}) {
+  return (
+    <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+      <div className="max-w-2xl">
+        <p className="text-sm font-semibold uppercase tracking-[0.22em] text-amber-700">
+          {eyebrow}
+        </p>
+        <h2 className="mt-3 text-3xl font-semibold tracking-tight text-stone-900 sm:text-4xl">
+          {title}
+        </h2>
+        <p className="mt-4 text-base leading-7 text-stone-600">{description}</p>
+      </div>
+
+      <Link
+        href={actionHref}
+        className="inline-flex items-center text-sm font-semibold text-stone-900 transition hover:text-amber-700"
+      >
+        {actionLabel}
+        <ArrowRight className="ml-2 h-4 w-4" />
+      </Link>
+    </div>
+  );
+}
+
+function CarouselButton({ children, label, onClick }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      onClick={onClick}
+      className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white backdrop-blur transition hover:bg-white/20"
+    >
+      {children}
+    </button>
+  );
+}
+
+function ProductCard({ product, onAddToCart }) {
+  const discount = Math.max(
+    0,
+    Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100),
+  );
+
+  return (
+    <article className="group overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl">
+      <div className="relative overflow-hidden">
+        <div
+          className="h-72 bg-stone-100 bg-cover bg-center transition duration-500 group-hover:scale-105"
+          style={{ backgroundImage: `url("${product.image}")` }}
+        />
+        <div className="absolute inset-x-0 top-0 flex items-center justify-between p-4">
+          <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-semibold text-stone-800 shadow-sm">
+            {product.badge}
+          </span>
+          <button
+            type="button"
+            aria-label={`Save ${product.name}`}
+            className="rounded-full bg-white/90 p-2 text-stone-700 shadow-sm transition hover:bg-white"
+          >
+            <Heart className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      <div className="p-5">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">
+          {product.category}
+        </p>
+        <h3 className="mt-2 text-lg font-semibold text-stone-900">
+          {product.name}
+        </h3>
+
+        <div className="mt-3 flex items-center gap-2 text-sm text-stone-500">
+          <div className="flex items-center gap-1 text-amber-500">
+            <Star className="h-4 w-4 fill-current" />
+            <span className="font-semibold text-stone-800">{product.rating}</span>
+          </div>
+          <span>({product.reviews} reviews)</span>
+        </div>
+
+        <div className="mt-4 flex items-end gap-3">
+          <span className="text-2xl font-semibold text-stone-900">
+            {formatPrice(product.price)}
+          </span>
+          <span className="text-sm text-stone-400 line-through">
+            {formatPrice(product.originalPrice)}
+          </span>
+          <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+            {discount}% off
+          </span>
+        </div>
+
+        <div className="mt-5 flex gap-3">
+          <button
+            type="button"
+            onClick={() => onAddToCart(product)}
+            className="flex-1 rounded-full bg-stone-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-stone-700"
+          >
+            Add to cart
+          </button>
+          <Link
+            href={`/products/${product.id}`}
+            className="inline-flex items-center justify-center rounded-full border border-stone-200 px-4 py-3 text-sm font-semibold text-stone-800 transition hover:bg-stone-100"
+          >
+            View
+          </Link>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function ProductCardSkeleton() {
+  return (
+    <div className="overflow-hidden rounded-[1.75rem] border border-stone-200 bg-white p-4 shadow-sm">
+      <div className="skeleton h-72 w-full rounded-[1.25rem]" />
+      <div className="mt-5 space-y-3">
+        <div className="skeleton h-3 w-20" />
+        <div className="skeleton h-6 w-3/4" />
+        <div className="skeleton h-4 w-1/2" />
+        <div className="skeleton h-8 w-2/3" />
+        <div className="grid grid-cols-2 gap-3 pt-2">
+          <div className="skeleton h-11 w-full rounded-full" />
+          <div className="skeleton h-11 w-full rounded-full" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function normalizeProducts(items) {
+  return items.map((item, index) => ({
+    id: String(item._id || item.id || `product-${index + 1}`),
+    name: item.name || item.title || "Untitled Product",
+    category: item.category?.name || item.category || "Featured",
+    price: Number(item.offerPrice || item.price || 0),
+    originalPrice: Number(
+      item.originalPrice || item.price || item.offerPrice || 0,
+    ),
+    rating: Number(item.rating || 4.7),
+    reviews: Number(item.reviews || item.reviewCount || 24),
+    badge: item.badge || "Featured",
+    isDemo: Boolean(item.isDemo),
+    image:
+      item.images?.[0]?.url ||
+      item.image ||
+      "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=900&q=80",
+  }));
+}
+
+function formatPrice(amount) {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(amount);
 }

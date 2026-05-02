@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDispatch } from 'react-redux';
-import Navbar from '@/components/ecommerce/Navbar';
 import { useAuth } from '@/hooks/useAuth';
 import { updateUser } from '@/redux/slices/authSlice';
 import { getProfile, updateProfile, uploadImages } from '@/services/profileService';
@@ -131,9 +130,7 @@ export default function EditProfilePage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Navbar searchTerm="" onSearch={() => {}} cartCount={0} />
-
-      <main className="mx-auto max-w-3xl px-4 pb-16 pt-28 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-3xl font-black text-slate-900">Edit Profile</h1>
           <button onClick={() => router.push(backRoute)} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700">
