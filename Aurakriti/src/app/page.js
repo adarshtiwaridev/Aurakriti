@@ -264,9 +264,11 @@ export default function HomePage() {
         const data = await response.json();
         const items = Array.isArray(data)
           ? data
-          : Array.isArray(data?.products)
-            ? data.products
-            : [];
+          : Array.isArray(data?.data?.products)
+            ? data.data.products
+            : Array.isArray(data?.products)
+              ? data.products
+              : [];
 
         if (isMounted) {
           setProducts(items.length > 0 ? normalizeProducts(items) : fallbackProducts.map((product) => ({ ...product, isDemo: true })));
@@ -502,25 +504,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="border-y border-stone-200 bg-white/80">
-        <div className="section-container grid gap-4 py-5 sm:grid-cols-3">
-          {uspItems.map((item) => {
-            const Icon = item.icon;
-
-            return (
-              <div key={item.id} className="flex items-center gap-4">
-                <div className="rounded-full bg-stone-100 p-3">
-                  <Icon className="h-5 w-5 text-stone-700" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-stone-900">{item.title}</h3>
-                  <p className="text-sm text-stone-500">{item.text}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
+  
 
       <main className="pb-20">
         <section id="categories" className="section-container py-16 sm:py-20">
@@ -559,35 +543,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section id="promotions" className="section-container py-4 sm:py-6">
-          <div className="grid gap-5 lg:grid-cols-2">
-            {promoBanners.map((banner) => (
-              <Link
-                key={banner.id}
-                href={banner.href}
-                className={`group overflow-hidden rounded-[2rem] border border-stone-200 bg-gradient-to-br ${banner.tone} p-8 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl`}
-              >
-                <div className="flex h-full flex-col justify-between gap-8">
-                  <div>
-                    <span className="inline-flex rounded-full bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-stone-700">
-                      Limited Offer
-                    </span>
-                    <h3 className="mt-5 max-w-sm text-3xl font-semibold tracking-tight text-stone-900">
-                      {banner.title}
-                    </h3>
-                    <p className="mt-3 max-w-md text-sm leading-6 text-stone-600">
-                      {banner.subtitle}
-                    </p>
-                  </div>
-                  <div className="inline-flex items-center text-sm font-semibold text-stone-900">
-                    Shop now
-                    <ArrowRight className="ml-2 h-4 w-4 transition group-hover:translate-x-1" />
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
+  
 
         <section
           id="featured-products"
@@ -793,8 +749,8 @@ function normalizeProducts(items) {
       item.originalPrice || item.price || item.offerPrice || 0,
     ),
     rating: Number(item.rating || 4.7),
-    reviews: Number(item.reviews || item.reviewCount || 24),
-    badge: item.badge || "Featured",
+    reviews: Number(item.reviews?.length || item.reviews || item.reviewCount || 24),
+    badge: item.badge || (item.isFeatured ? "Featured" : "Popular"),
     isDemo: Boolean(item.isDemo),
     image:
       item.images?.[0]?.url ||

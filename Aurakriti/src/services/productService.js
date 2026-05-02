@@ -73,3 +73,38 @@ export async function deleteProduct(id) {
 
   return parseResponse(response);
 }
+
+export async function createReview(productId, review) {
+  const response = await fetch(`/api/products/${productId}/reviews`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(review),
+  });
+
+  return parseResponse(response);
+}
+
+export async function updateReview(productId, reviewId, review) {
+  const response = await fetch(`/api/products/${productId}/reviews`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify({ reviewId, ...review }),
+  });
+
+  return parseResponse(response);
+}
+
+export async function deleteReview(productId, reviewId) {
+  const response = await fetch(`/api/products/${productId}/reviews?reviewId=${encodeURIComponent(reviewId)}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+
+  return parseResponse(response);
+}

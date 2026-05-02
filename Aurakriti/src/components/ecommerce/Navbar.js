@@ -9,7 +9,6 @@ import { useCart } from "@/hooks/useCart";
 const NAV_LINKS = [
   { label: "Home",     href: "/" },
   { label: "Shop",     href: "/shop" },
-  { label: "Dashboard", href: "/user/dashboard", authOnly: true },
   { label: "Orders",   href: "/user/orders", authOnly: true },
   { label: "About",    href: "/about" },
   { label: "Contact",  href: "/contact" },
@@ -47,9 +46,6 @@ export default function Navbar() {
     return () => window.removeEventListener("scroll", handler);
   }, []);
 
-  // Close mobile menu on route change
-  useEffect(() => setMenuOpen(false), [pathname]);
-
   return (
     <>
       <header
@@ -82,6 +78,7 @@ export default function Navbar() {
                   <Link
                     key={label}
                     href={resolvedHref}
+                    onClick={() => setMenuOpen(false)}
                     className={`
                       px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
                       ${active

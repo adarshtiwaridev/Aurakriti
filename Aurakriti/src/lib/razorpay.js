@@ -15,6 +15,10 @@ const getRazorpayConfig = () => {
 
 export const isRazorpayConfigured = () => Boolean(getRazorpayConfig());
 
+function allowMockPayments() {
+  return process.env.NODE_ENV !== 'production' && process.env.DISABLE_MOCK_PAYMENTS !== 'true';
+}
+
 function getModeFromKey(keyId) {
   return keyId?.startsWith('rzp_live_') ? 'live' : 'test';
 }
@@ -24,6 +28,19 @@ export async function createPaymentOrder({ amount, receipt, notes }) {
   const normalizedAmount = Math.round(Number(amount) * 100);
 
   if (!razorpay) {
+    if (allowMockPayments()) {
+      return {
+        id: `mock_order_${Date.now()}`,
+        amount: normalizedAmount,
+        currency: 'INR',
+        receipt,
+        notes,
+        mode: 'mock',
+        key: 'mock_key',
+        mock: true,
+      };
+    }
+
     throw new Error('Razorpay is not configured. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.');
   }
 
@@ -42,17 +59,35 @@ export async function createPaymentOrder({ amount, receipt, notes }) {
     }),
   });
 
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(`Failed to create Razorpay order: ${errorBody}`);
-  }
+  try {
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`Failed to create Razorpay order: ${errorBody}`);
+    }
 
-  const data = await response.json();
-  return {
-    ...data,
-    mode: getModeFromKey(razorpay.keyId),
-    key: razorpay.keyId,
-  };
+    const data = await response.json();
+    return {
+      ...data,
+      mode: getModeFromKey(razorpay.keyId),
+      key: razorpay.keyId,
+    };
+  } catch (error) {
+    if (allowMockPayments()) {
+      return {
+        id: `mock_order_${Date.now()}`,
+        amount: normalizedAmount,
+        currency: 'INR',
+        receipt,
+        notes,
+        mode: 'mock',
+        key: 'mock_key',
+        mock: true,
+        fallbackReason: error.message,
+      };
+    }
+
+    throw error;
+  }
 }
 
 export function verifyPaymentSignature({ orderId, paymentId, signature }) {

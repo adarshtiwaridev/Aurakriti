@@ -84,7 +84,6 @@ export default function ProductCard({ product, compact = false, onAddToCart }) {
           {imgSrc ? (
             <Image
               src={imgSrc}
-              alt={name}
               alt={productTitle}
               fill
               sizes="(max-width: 768px) 50vw, 25vw"

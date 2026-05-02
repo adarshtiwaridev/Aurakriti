@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { PRODUCT_CATEGORIES } from '@/lib/catalog';
-import { requireRole } from '@/lib/api-auth';
-import connectDB from '@/lib/db';
-import Product from '@/models/Product';
 import fs from 'fs';
 import path from 'path';
+import connectDB from '@/lib/db';
+import { PRODUCT_CATEGORIES } from '@/lib/catalog';
+import { requireAuth, requireRole } from '@/lib/api-auth';
+import { mapDemoProduct, mapProductDocument } from '@/lib/product-utils';
+import Product from '@/models/Product';
 
 const productSchema = z.object({
   title: z.string().trim().min(2),
@@ -14,170 +15,177 @@ const productSchema = z.object({
   category: z.enum(PRODUCT_CATEGORIES),
   stock: z.coerce.number().int().min(0),
   images: z.array(z.string().min(1)).default([]),
+  tags: z.array(z.string().trim().min(1)).max(20).default([]),
+  isFeatured: z.boolean().optional(),
+  isActive: z.boolean().optional(),
 });
 
-const mapProduct = (product) => ({
-  id: product.id,
-  title: product.name,
-  name: product.name,
-  description: product.description,
-  price: product.price,
-  category: product.category,
-  images: product.images ?? [],
-  image: product.images?.[0] ?? '',
-  stock: product.stock,
-  rating: product.rating ?? 0,
-  tags: [],
-  sellerId: null,
-  seller: null,
-  createdAt: product.createdAt,
-  updatedAt: product.createdAt,
-  isFeatured: product.isFeatured,
-  isDemo: true,
-});
-
-const mapDbProduct = (product) => ({
-  id: String(product._id),
-  title: product.title,
-  name: product.title,
-  description: product.description,
-  price: product.price,
-  category: product.category,
-  images: product.images ?? [],
-  image: product.images?.[0] ?? '',
-  stock: product.stock,
-  rating: product.rating ?? 0,
-  tags: product.tags ?? [],
-  sellerId: product.seller ? String(product.seller) : null,
-  seller: null,
-  createdAt: product.createdAt,
-  updatedAt: product.updatedAt,
-  isFeatured: Boolean(product.isFeatured),
-  isDemo: false,
-});
+function readDemoProducts() {
+  const filePath = path.join(process.cwd(), 'src/app/data/products.json');
+  const rawData = fs.readFileSync(filePath, 'utf8');
+  const jsonData = JSON.parse(rawData);
+  return Array.isArray(jsonData.products) ? jsonData.products : [];
+}
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
-  const page = Number(searchParams.get('page') ?? 1);
-  const limit = Math.min(Number(searchParams.get('limit') ?? 12), 50);
+  const page = Math.max(1, Number(searchParams.get('page') ?? 1));
+  const limit = Math.min(Math.max(Number(searchParams.get('limit') ?? 12), 1), 50);
   const category = searchParams.get('category');
   const search = searchParams.get('search');
   const seller = searchParams.get('seller');
   const mine = searchParams.get('mine') === 'true';
+  const featured = searchParams.get('featured') === 'true';
+  const includeInactive = searchParams.get('includeInactive') === 'true';
 
-  // DB-first products so cart receives valid Mongo product ids.
+  let currentUser = null;
+  if (mine || includeInactive) {
+    const auth = await requireAuth(request);
+    if (auth.error) {
+      return auth.error;
+    }
+    currentUser = auth.user;
+  }
+
   try {
     await connectDB();
 
     const query = {};
     if (mine) {
-      const auth = await requireRole(request, ['seller', 'admin']);
-      if (auth.error) {
-        return auth.error;
+      if (!['seller', 'admin'].includes(currentUser.role)) {
+        return NextResponse.json({ success: false, message: 'Only sellers can view private inventory.' }, { status: 403 });
       }
-      if (auth.user.role === 'seller') {
-        query.seller = auth.user._id;
+      if (currentUser.role === 'seller') {
+        query.seller = currentUser._id;
+      } else if (seller) {
+        query.seller = seller;
       }
-    } else {
+    } else if (!includeInactive) {
       query.isActive = true;
     }
 
-    if (seller) {
+    if (seller && !mine) {
       query.seller = seller;
     }
 
+    if (featured) {
+      query.isFeatured = true;
+    }
+
     if (category && category !== 'All') {
-      query.category = String(category).toLowerCase();
+      query.category = String(category).trim();
     }
 
     if (search?.trim()) {
       const regex = { $regex: search.trim(), $options: 'i' };
-      query.$or = [{ title: regex }, { description: regex }, { category: regex }];
+      query.$or = [{ title: regex }, { description: regex }, { category: regex }, { tags: regex }];
     }
 
     const total = await Product.countDocuments(query);
     const skip = Math.max(0, (page - 1) * limit);
+    const sort = featured ? { rating: -1, createdAt: -1 } : { createdAt: -1 };
 
     const dbProducts = await Product.find(query)
-      .sort({ createdAt: -1 })
+      .populate('seller', 'name email')
+      .sort(sort)
       .skip(skip)
       .limit(limit)
       .lean();
 
-    const categoriesFromDb = await Product.distinct('category', mine && query.seller ? { seller: query.seller } : { isActive: true });
+    const categoriesFromDb = await Product.distinct(
+      'category',
+      mine && query.seller ? { seller: query.seller } : includeInactive ? {} : { isActive: true }
+    );
 
     return NextResponse.json({
       success: true,
       data: {
-        products: dbProducts.map(mapDbProduct),
-        categories: categoriesFromDb.length ? categoriesFromDb : PRODUCT_CATEGORIES,
+        products: dbProducts.map((product) => mapProductDocument(product, currentUser)),
+        categories: categoriesFromDb.length ? categoriesFromDb.sort() : PRODUCT_CATEGORIES,
         pagination: {
           page,
           limit,
           total,
-          pages: Math.ceil(total / limit),
+          pages: Math.max(1, Math.ceil(total / limit)),
         },
         scope: mine ? 'seller' : 'public',
       },
     });
   } catch {
-    // Fallback to static JSON data when DB is unavailable.
-  }
+    const allProducts = readDemoProducts();
+    let products = allProducts.map(mapDemoProduct);
 
-  // Read products from JSON file
-  const filePath = path.join(process.cwd(), 'src/app/data/products.json');
-  const rawData = fs.readFileSync(filePath, 'utf8');
-  const jsonData = JSON.parse(rawData);
-  let products = jsonData.products || [];
+    if (featured) {
+      products = products.filter((product) => product.isFeatured);
+    }
+    if (category && category !== 'All') {
+      products = products.filter((product) => product.category === category);
+    }
+    if (search?.trim()) {
+      const query = search.trim().toLowerCase();
+      products = products.filter((product) =>
+        [product.name, product.description, product.category].some((value) => String(value || '').toLowerCase().includes(query))
+      );
+    }
+    if (mine) {
+      products = [];
+    }
 
-  // Apply filters
-  if (category && category !== 'All') {
-    products = products.filter(p => p.category === category);
-  }
+    const total = products.length;
+    const skip = Math.max(0, (page - 1) * limit);
+    const categories = [...new Set(products.map((product) => product.category).filter(Boolean))].sort();
 
-  if (search?.trim()) {
-    const searchLower = search.trim().toLowerCase();
-    products = products.filter(p =>
-      p.name.toLowerCase().includes(searchLower) ||
-      p.description.toLowerCase().includes(searchLower) ||
-      p.category.toLowerCase().includes(searchLower)
-    );
-  }
-
-  // For mine, since no auth in JSON, return empty if requested
-  if (mine) {
-    products = [];
-  }
-
-  // Sort by createdAt desc
-  products.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-  const total = products.length;
-  const skip = Math.max(0, (page - 1) * limit);
-  const paginatedProducts = products.slice(skip, skip + limit);
-
-  // Get categories from products
-  const categoriesFromData = [...new Set(products.map(p => p.category))].sort();
-
-  return NextResponse.json({
-    success: true,
-    data: {
-      products: paginatedProducts.map(mapProduct),
-      categories: categoriesFromData.length ? categoriesFromData : PRODUCT_CATEGORIES,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
+    return NextResponse.json({
+      success: true,
+      data: {
+        products: products.slice(skip, skip + limit),
+        categories: categories.length ? categories : PRODUCT_CATEGORIES,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.max(1, Math.ceil(total / limit)),
+        },
+        scope: mine ? 'seller' : 'public',
       },
-      scope: mine ? 'seller' : 'public',
-    },
-  });
+    });
+  }
 }
 
 export async function POST(request) {
-  return NextResponse.json(
-    { success: false, message: 'Products are read-only from JSON file.' },
-    { status: 403 }
-  );
+  const auth = await requireRole(request, ['seller', 'admin']);
+  if (auth.error) {
+    return auth.error;
+  }
+
+  try {
+    await connectDB();
+    const body = await request.json();
+    const parsed = productSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, message: parsed.error.issues[0]?.message || 'Invalid product data.' },
+        { status: 400 }
+      );
+    }
+
+    const product = await Product.create({
+      ...parsed.data,
+      tags: parsed.data.tags.map((tag) => tag.trim()).filter(Boolean),
+      images: parsed.data.images.filter(Boolean),
+      seller: auth.user._id,
+      isActive: auth.user.role === 'admin' ? parsed.data.isActive ?? true : true,
+    });
+
+    const populated = await Product.findById(product._id).populate('seller', 'name email');
+
+    return NextResponse.json({
+      success: true,
+      message: 'Product created successfully.',
+      data: mapProductDocument(populated, auth.user),
+    });
+  } catch (error) {
+    return NextResponse.json({ success: false, message: error.message || 'Unable to create product.' }, { status: 500 });
+  }
 }
