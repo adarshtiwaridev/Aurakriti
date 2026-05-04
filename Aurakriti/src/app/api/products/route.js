@@ -96,9 +96,27 @@ export async function GET(request) {
     }
 
     // New filters
-    const priceMin = Number(searchParams.get('priceMin') ?? 0);
-    const priceMax = Number(searchParams.get('priceMax') ?? 999999);
-    query.price = { $gte: priceMin, $lte: priceMax };
+    const priceMinParam = searchParams.get('priceMin');
+    const priceMaxParam = searchParams.get('priceMax');
+    const priceQuery = {};
+
+    if (priceMinParam !== null) {
+      const priceMin = Number(priceMinParam);
+      if (!Number.isNaN(priceMin)) {
+        priceQuery.$gte = priceMin;
+      }
+    }
+
+    if (priceMaxParam !== null) {
+      const priceMax = Number(priceMaxParam);
+      if (!Number.isNaN(priceMax)) {
+        priceQuery.$lte = priceMax;
+      }
+    }
+
+    if (Object.keys(priceQuery).length > 0) {
+      query.price = priceQuery;
+    }
 
     const ratingGte = Number(searchParams.get('ratingGte') ?? 0);
     if (ratingGte > 0) query.rating = { $gte: ratingGte };
