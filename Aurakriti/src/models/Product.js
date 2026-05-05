@@ -109,6 +109,13 @@ productSchema.index({
   tags: 'text',
 });
 
+// ✅ Filter/Sort indexes
+productSchema.index({ price: 1 });
+productSchema.index({ rating: -1 });
+productSchema.index({ stock: 1 });
+productSchema.index({ category: 1 });
+
+
 
 // ✅ Prevent model overwrite in Next.js
 const Product =
