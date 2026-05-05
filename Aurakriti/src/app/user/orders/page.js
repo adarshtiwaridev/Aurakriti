@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { RefreshCw, Download, Truck, PackageCheck, CircleDot, Box, XCircle, MapPin } from 'lucide-react';
@@ -227,7 +228,13 @@ export default function UserOrdersPage() {
                       {(order.items || []).map((item) => (
                         <div key={item.id} className="flex items-center gap-3 rounded-xl border border-[#f3eadc] p-3">
                           {item.image ? (
-                            <img src={item.image} alt={item.title} className="h-16 w-16 rounded-lg object-cover object-center" loading="lazy" />
+                            <Image
+                              src={item.image}
+                              alt={item.title}
+                              width={64}
+                              height={64}
+                              className="rounded-lg object-cover object-center"
+                            />
                           ) : (
                             <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-[#f6ecde] text-[#c9a14a]">✦</div>
                           )}
