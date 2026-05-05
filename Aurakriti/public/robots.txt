@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /seller/
+Disallow: /auth/
+Allow: /products/
+Allow: /shop/
+
+Sitemap: https://aurakriti.vercel.app/sitemap.xml
+
+Crawl-delay: 1
