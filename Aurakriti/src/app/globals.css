@@ -51,6 +51,9 @@
   /* Typography */
   --font-display: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
   --font-body: 'Inter', system-ui, sans-serif;
+  --font-geist: var(--font-geist-fallback, system-ui, sans-serif);
+  --font-geist-mono: var(--font-geist-mono-fallback, ui-monospace, monospace);
+  --font-playfair: var(--font-playfair-fallback, system-ui, serif);
 }
  
 /* ── Base reset ─────────────────────────────────────────────── */
