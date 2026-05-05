@@ -81,21 +81,55 @@ export async function GET(request) {
       query.$or = [{ title: regex }, { description: regex }, { category: regex }, { tags: regex }];
     }
 
+    // New filters
+    const priceMinParam = searchParams.get('priceMin');
+    const priceMaxParam = searchParams.get('priceMax');
+    const priceQuery = {};
+
+    if (priceMinParam !== null) {
+      const priceMin = Number(priceMinParam);
+      if (!Number.isNaN(priceMin)) {
+        priceQuery.$gte = priceMin;
+      }
+    }
+
+    if (priceMaxParam !== null) {
+      const priceMax = Number(priceMaxParam);
+      if (!Number.isNaN(priceMax)) {
+        priceQuery.$lte = priceMax;
+      }
+    }
+
+    if (Object.keys(priceQuery).length > 0) {
+      query.price = priceQuery;
+    }
+
+    const ratingGte = Number(searchParams.get('ratingGte') ?? 0);
+    if (ratingGte > 0) query.rating = { $gte: ratingGte };
+
+    if (searchParams.get('inStock') === 'true') query.stock = { $gt: 0 };
+
+    // Dynamic sort
+    const sortBy = searchParams.get('sortBy') ?? 'newest';
+    let dbSort = { createdAt: -1 };
+    switch (sortBy) {
+      case 'price-low': dbSort = { price: 1 }; break;
+      case 'price-high': dbSort = { price: -1 }; break;
+      case 'rating': dbSort = { rating: -1 }; break;
+      case 'popular': dbSort = { rating: -1, createdAt: -1 }; break;
+    }
+
     const total = await Product.countDocuments(query);
     const skip = Math.max(0, (page - 1) * limit);
     const sort = featured ? { rating: -1, createdAt: -1 } : { createdAt: -1 };
 
     const dbProducts = await Product.find(query)
-      .populate('seller', 'name email')
-      .sort(sort)
+      .sort(dbSort)
       .skip(skip)
       .limit(limit)
       .lean();
 
-    const categoriesFromDb = await Product.distinct(
-      'category',
-      mine && query.seller ? { seller: query.seller } : includeInactive ? {} : { isActive: true }
-    );
+    const categoriesFromDb = await Product.distinct('category', mine && query.seller ? { seller: query.seller } : { isActive: true });
 
     return NextResponse.json({
       success: true,
@@ -112,24 +146,36 @@ export async function GET(request) {
       },
     });
   } catch {
-    const allProducts = readDemoProducts();
-    let products = allProducts.map(mapDemoProduct);
+    // Fallback to static JSON data when DB is unavailable.
+  }
 
-    if (featured) {
-      products = products.filter((product) => product.isFeatured);
-    }
-    if (category && category !== 'All') {
-      products = products.filter((product) => product.category === category);
-    }
-    if (search?.trim()) {
-      const query = search.trim().toLowerCase();
-      products = products.filter((product) =>
-        [product.name, product.description, product.category].some((value) => String(value || '').toLowerCase().includes(query))
-      );
-    }
-    if (mine) {
-      products = [];
-    }
+  // Read products from JSON file
+  const filePath = path.join(process.cwd(), 'src/app/data/products.json');
+  const rawData = fs.readFileSync(filePath, 'utf8');
+  const jsonData = JSON.parse(rawData);
+  let products = jsonData.products || [];
+
+  // Apply filters
+  if (category && category !== 'All') {
+    products = products.filter(p => p.category === category);
+  }
+
+  if (search?.trim()) {
+    const searchLower = search.trim().toLowerCase();
+    products = products.filter(p =>
+      p.name.toLowerCase().includes(searchLower) ||
+      p.description.toLowerCase().includes(searchLower) ||
+      p.category.toLowerCase().includes(searchLower)
+    );
+  }
+
+  // For mine, since no auth in JSON, return empty if requested
+  if (mine) {
+    products = [];
+  }
+
+  // Sort by createdAt desc
+  products.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     const total = products.length;
     const skip = Math.max(0, (page - 1) * limit);
