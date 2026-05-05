@@ -78,7 +78,7 @@ export async function GET(request) {
 
     if (search?.trim()) {
       const regex = { $regex: search.trim(), $options: 'i' };
-      query.$or = [{ title: regex }, { description: regex }, { category: regex }, { tags: regex }];
+      query.$or = [{ title: regex }, { description: regex }, { category: regex }];
     }
 
     // New filters
@@ -129,6 +129,7 @@ export async function GET(request) {
       .limit(limit)
       .lean();
 
+
     const categoriesFromDb = await Product.distinct('category', mine && query.seller ? { seller: query.seller } : { isActive: true });
 
     return NextResponse.json({
@@ -169,13 +170,31 @@ export async function GET(request) {
     );
   }
 
+  // New filters for fallback
+  const priceMin = Number(searchParams.get('priceMin') ?? 0);
+  const priceMax = Number(searchParams.get('priceMax') ?? 999999);
+  products = products.filter(p => p.price >= priceMin && p.price <= priceMax);
+
+  const ratingGte = Number(searchParams.get('ratingGte') ?? 0);
+  if (ratingGte > 0) products = products.filter(p => (p.rating || 0) >= ratingGte);
+
+  if (searchParams.get('inStock') === 'true') products = products.filter(p => (p.stock || 0) > 0);
+
   // For mine, since no auth in JSON, return empty if requested
   if (mine) {
     products = [];
   }
 
-  // Sort by createdAt desc
-  products.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  // Dynamic sort for fallback
+  const sortBy = searchParams.get('sortBy') ?? 'newest';
+  switch (sortBy) {
+    case 'price-low': products.sort((a, b) => a.price - b.price); break;
+    case 'price-high': products.sort((a, b) => b.price - a.price); break;
+    case 'rating': products.sort((a, b) => (b.rating || 0) - (a.rating || 0)); break;
+    case 'popular': products.sort((a, b) => ((b.rating || 0) - (a.rating || 0)) || new Date(b.createdAt) - new Date(a.createdAt)); break;
+    default: products.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }
+
 
     const total = products.length;
     const skip = Math.max(0, (page - 1) * limit);
