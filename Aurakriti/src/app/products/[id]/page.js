@@ -590,7 +590,6 @@ export default function ProductDetailsPage() {
       </main>
     </div>
   );
-=======
 export async function generateMetadata({ params }) {
   try {
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://aurakriti.vercel.app';
