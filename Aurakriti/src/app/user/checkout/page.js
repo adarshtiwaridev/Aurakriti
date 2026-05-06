@@ -3,6 +3,7 @@
 import { useCart } from '@/hooks/useCart';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, Lock, CheckCircle2, Package, CreditCard, Truck } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -292,7 +293,13 @@ export default function CheckoutPage() {
                   <div key={item.id} className="flex items-center justify-between border-b border-[#f2e5d4] pb-4 last:border-0">
                     <div className="flex items-center gap-4 flex-1">
                       {item.image ? (
-                        <img src={item.image} alt={item.title} className="h-16 w-16 rounded-xl object-cover border border-[#eadfce]" />
+                        <Image
+                          src={item.image}
+                          alt={item.title}
+                          width={64}
+                          height={64}
+                          className="rounded-xl object-cover border border-[#eadfce]"
+                        />
                       ) : (
                         <div className="h-16 w-16 rounded-xl bg-[#f9f0e3] flex items-center justify-center text-xl">💎</div>
                       )}

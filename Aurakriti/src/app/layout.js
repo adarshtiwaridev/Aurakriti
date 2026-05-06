@@ -1,9 +1,30 @@
+import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
 import { Providers } from "./providers";
 import Navbar from "../components/ecommerce/Navbar";
 import Footer from "@/components/Footer";
 import SkipLink from "@/components/SkipLink";
 import { getAppUrl, getAppUrlObject } from "@/lib/app-url";
 import "./globals.css";
+
+/* ── Google Fonts ───────────────────────────────────────────────── */
+const geist = Geist({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-geist",
+});
+
+const geistMono = Geist_Mono({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-geist-mono",
+});
+
+const playfairDisplay = Playfair_Display({
+  subsets: ["latin"],
+  weight: ["400", "600", "700", "900"],
+  display: "swap",
+  variable: "--font-playfair",
+});
 
 /* ── Metadata ───────────────────────────────────────────────── */
 export const metadata = {
@@ -62,10 +83,16 @@ export default function RootLayout({ children }) {
     <html
       lang="en"
       suppressHydrationWarning
+      className={`${geist.variable} ${geistMono.variable} ${playfairDisplay.variable}`}
     >
+      <head>
+        <link rel="preconnect" href="https://res.cloudinary.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://images.unsplash.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://raw.githubusercontent.com" crossOrigin="anonymous" />
+      </head>
       <body
         style={{
-          fontFamily: "var(--font-body)",
+          fontFamily: "var(--font-geist)",
           background: "var(--surface-page)",
           color: "var(--gray-900)",
           minHeight: "100vh",

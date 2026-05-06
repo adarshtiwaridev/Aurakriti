@@ -1,6 +1,42 @@
 import mongoose from 'mongoose';
 import { JEWELLERY_CATEGORIES } from '../constants/categories.js';
 
+const reviewSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    rating: {
+      type: Number,
+      required: true,
+      min: [1, 'Rating must be at least 1'],
+      max: [5, 'Rating cannot exceed 5'],
+    },
+    title: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    comment: {
+      type: String,
+      required: true,
+      trim: true,
+      minlength: [3, 'Review must be at least 3 characters'],
+      maxlength: [1000, 'Review cannot exceed 1000 characters'],
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
 const productSchema = new mongoose.Schema(
   {
     title: {
@@ -69,6 +105,19 @@ const productSchema = new mongoose.Schema(
       min: [0, 'Rating cannot be negative'],
       max: [5, 'Rating cannot exceed 5'],
     },
+    reviewCount: {
+      type: Number,
+      default: 0,
+      min: [0, 'Review count cannot be negative'],
+    },
+    reviews: {
+      type: [reviewSchema],
+      default: [],
+    },
+    isFeatured: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
@@ -83,6 +132,12 @@ productSchema.pre('validate', function () {
   if (!this.title && this.name) {
     this.title = this.name;
   }
+
+  const reviews = Array.isArray(this.reviews) ? this.reviews : [];
+  this.reviewCount = reviews.length;
+  this.rating = reviews.length
+    ? Number((reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / reviews.length).toFixed(1))
+    : 0;
 });
 
 
@@ -108,6 +163,13 @@ productSchema.index({
   description: 'text',
   tags: 'text',
 });
+
+// ✅ Filter/Sort indexes
+productSchema.index({ price: 1 });
+productSchema.index({ rating: -1 });
+productSchema.index({ stock: 1 });
+productSchema.index({ category: 1 });
+
 
 
 // ✅ Prevent model overwrite in Next.js

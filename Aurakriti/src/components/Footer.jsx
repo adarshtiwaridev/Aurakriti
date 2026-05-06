@@ -2,103 +2,88 @@ import Link from "next/link";
 
 const FOOTER_LINKS = {
   Shop: [
-    { label: "All Products",  href: "/products" },
+    { label: "All Products", href: "/products" },
     { label: "Deals & Offers", href: "/deals" },
-    { label: "New Arrivals",  href: "/products?sort=newest" },
-    { label: "Brands",        href: "/brands" },
+    { label: "New Arrivals", href: "/products?sort=newest" },
+    { label: "Brands", href: "/brands" },
   ],
   Account: [
-    { label: "My Profile",   href: "/user/profile" },
-    { label: "My Orders",    href: "/user/orders" },
-    { label: "Wishlist",     href: "/user/wishlist" },
+    { label: "My Profile", href: "/user/profile" },
+    { label: "My Orders", href: "/user/orders" },
+    { label: "Wishlist", href: "/user/wishlist" },
     { label: "Notifications", href: "/user/notifications" },
   ],
   Seller: [
     { label: "Seller Dashboard", href: "/seller" },
-    { label: "Add Product",      href: "/seller/products/new" },
-    { label: "Manage Orders",    href: "/seller/orders" },
+    { label: "Add Product", href: "/seller/products/new" },
+    { label: "Manage Orders", href: "/seller/orders" },
   ],
   Support: [
     { label: "Help Centre", href: "/help" },
-    { label: "Contact Us",  href: "/contact" },
-    { label: "Returns",     href: "/returns" },
-    { label: "Shipping",    href: "/shipping" },
+    { label: "Contact Us", href: "/contact" },
+    { label: "Returns", href: "/returns" },
+    { label: "Shipping", href: "/shipping" },
   ],
 };
+
+const TRUST_ITEMS = [
+  { icon: "🚚", title: "Free Delivery", sub: "On orders over ₹499" },
+  { icon: "↩️", title: "Easy Returns", sub: "10-day hassle-free" },
+  { icon: "🔒", title: "Secure Payments", sub: "256-bit encryption" },
+  { icon: "🎧", title: "24/7 Support", sub: "Always here to help" },
+];
+
+const SOCIALS = [
+  { label: "Instagram", icon: "📸", href: "#" },
+  { label: "Twitter", icon: "🐦", href: "#" },
+  { label: "Facebook", icon: "👤", href: "#" },
+];
 
 const PAYMENT_ICONS = ["💳", "🏦", "📱", "💰"];
 
 export default function Footer() {
-  return (
-    <footer style={{ background: "var(--gray-900)", color: "var(--gray-400)" }}>
+  const year = new Date().getFullYear();
 
-      {/* Trust bar */}
-      <div
-        style={{
-          borderBottom: "1px solid var(--gray-700)",
-          padding: "1.25rem 0",
-        }}
-      >
+  return (
+    <footer className="bg-gray-900 text-gray-400">
+
+      {/* Trust Bar */}
+      <div className="border-b border-gray-700 py-5">
         <div className="section-container">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-            {[
-              { icon: "🚚", title: "Free Delivery",   sub: "On orders over ₹499" },
-              { icon: "↩️",  title: "Easy Returns",    sub: "10-day hassle-free" },
-              { icon: "🔒", title: "Secure Payments", sub: "256-bit encryption" },
-              { icon: "🎧", title: "24/7 Support",    sub: "Always here to help" },
-            ].map(({ icon, title, sub }) => (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+            {TRUST_ITEMS.map(({ icon, title, sub }) => (
               <div key={title} className="flex flex-col items-center gap-1">
-                <span style={{ fontSize: "1.5rem" }}>{icon}</span>
-                <p style={{ color: "#F1F5F9", fontSize: "0.8125rem", fontWeight: 600 }}>{title}</p>
-                <p style={{ fontSize: "0.75rem" }}>{sub}</p>
+                <span className="text-xl">{icon}</span>
+                <p className="text-slate-100 text-sm font-semibold">{title}</p>
+                <p className="text-xs">{sub}</p>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Main footer content */}
+      {/* Main Footer */}
       <div className="section-container py-12">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-10">
 
-          {/* Brand column */}
+          {/* Brand */}
           <div className="col-span-2 md:col-span-1">
-            <Link href="/" style={{ textDecoration: "none" }}>
-              <span
-                style={{
-                  fontSize: "1.25rem",
-                  fontWeight: 800,
-                  color: "#F1F5F9",
-                  fontFamily: "var(--font-display)",
-                  letterSpacing: "-0.03em",
-                }}
-              >
-                Aura<span style={{ color: "var(--brand-400)" }}>kriti</span>
-              </span>
+            <Link href="/" className="text-xl font-extrabold text-slate-100 tracking-tight">
+              Aura<span className="text-brand-400">kriti</span>
             </Link>
-            <p style={{ fontSize: "0.8125rem", lineHeight: 1.7, marginTop: "0.75rem" }}>
+
+            <p className="text-xs leading-relaxed mt-3">
               Your one-stop destination for everything you love. Quality products, trusted brands.
             </p>
 
-            {/* Social links */}
+            {/* Socials */}
             <div className="flex gap-3 mt-4">
-              {[
-                { label: "Instagram", icon: "📸", href: "#" },
-                { label: "Twitter",   icon: "🐦", href: "#" },
-                { label: "Facebook",  icon: "👤", href: "#" },
-              ].map(({ label, icon, href }) => (
+              {SOCIALS.map(({ label, icon, href }) => (
                 <a
                   key={label}
                   href={href}
                   aria-label={label}
-                  style={{
-                    width: 34, height: 34,
-                    background: "var(--gray-800)",
-                    borderRadius: "var(--radius-md)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: "1rem",
-                    textDecoration: "none",
-                  }}
+                  className="w-9 h-9 flex items-center justify-center bg-gray-800 rounded-md hover:bg-gray-700 transition"
                 >
                   {icon}
                 </a>
@@ -106,27 +91,19 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Link columns */}
+          {/* Links */}
           {Object.entries(FOOTER_LINKS).map(([group, links]) => (
             <div key={group}>
-              <h4
-                style={{
-                  color: "#F1F5F9",
-                  fontSize: "0.8125rem",
-                  fontWeight: 700,
-                  marginBottom: "0.75rem",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
+              <h4 className="text-slate-100 text-xs font-bold uppercase tracking-wider mb-3">
                 {group}
               </h4>
-              <ul style={{ listStyle: "none", padding: 0, display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+
+              <ul className="space-y-2">
                 {links.map(({ label, href }) => (
                   <li key={label}>
                     <Link
                       href={href}
-                      className="text-[0.8125rem] text-slate-400 no-underline transition-colors duration-150 hover:text-slate-100"
+                      className="text-xs text-slate-400 hover:text-slate-100 transition"
                     >
                       {label}
                     </Link>
@@ -138,43 +115,39 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* Bottom bar */}
-      <div
-        style={{ borderTop: "1px solid var(--gray-800)", padding: "1rem 0" }}
-      >
+      {/* Bottom Bar */}
+      <div className="border-t border-gray-800 py-4">
         <div className="section-container flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p style={{ fontSize: "0.75rem" }}>
-            © {new Date().getFullYear()} Aurakriti. All rights reserved.
+
+          <p className="text-xs">
+            © {year} Aurakriti. All rights reserved.
           </p>
 
-          <div className="flex items-center gap-2">
+          {/* Payment */}
+          <div className="flex gap-2">
             {PAYMENT_ICONS.map((icon, i) => (
               <span
                 key={i}
-                style={{
-                  fontSize: "1.25rem",
-                  background: "var(--gray-800)",
-                  width: 36, height: 24,
-                  borderRadius: 4,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                }}
+                className="w-9 h-6 flex items-center justify-center bg-gray-800 rounded text-sm"
               >
                 {icon}
               </span>
             ))}
           </div>
 
+          {/* Legal */}
           <div className="flex gap-4">
-            {["Privacy Policy", "Terms of Service", "Cookies"].map((item) => (
+            {["Privacy Policy", "Terms", "Cookies"].map((item) => (
               <Link
                 key={item}
                 href="#"
-                style={{ fontSize: "0.75rem", color: "var(--gray-500)", textDecoration: "none" }}
+                className="text-xs text-gray-500 hover:text-slate-200 transition"
               >
                 {item}
               </Link>
             ))}
           </div>
+
         </div>
       </div>
     </footer>

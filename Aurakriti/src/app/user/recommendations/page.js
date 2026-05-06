@@ -2,6 +2,15 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+
+const FloatingChatbot = dynamic(
+  () => import('@/components/ecommerce/FloatingChatbot'),
+  { 
+    loading: () => <div className="h-16 w-16 rounded-full bg-gray-100 animate-pulse" />,
+    ssr: false 
+  }
+);
 
 const SUGGESTIONS = [
   'Gold necklace for wedding',
