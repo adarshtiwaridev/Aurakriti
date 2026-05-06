@@ -7,7 +7,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Navbar from '@/components/ecommerce/Navbar';
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/hooks/useAuth';
-import { getProduct } from '@/services/productService';
+import { getProduct, getProducts } from '@/services/productService';
 import { addToCart as addToCartRequest } from '@/services/cartService';
 import { useDispatch } from 'react-redux';
 import { setCart } from '@/redux/slices/cartSlice';
@@ -73,6 +73,7 @@ export default function ProductDetailsPage() {
   const [error, setError] = useState('');
   const [adding, setAdding] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
+  const [relatedProducts, setRelatedProducts] = useState([]);
 
   const productId = params?.id;
 
@@ -89,15 +90,45 @@ export default function ProductDetailsPage() {
       try {
         setLoading(true);
         setError('');
+
         const data = await getProduct(productId);
+
         if (!active) return;
+
         setProduct(data);
         setActiveImage(0);
+
+        const related = await getProducts();
+
+        const productsArray = Array.isArray(related)
+          ? related
+          : related.products || [];
+
+        const currentCategory =data.category || data.categories?.[0] ||  '';
+
+        const filteredProducts = productsArray.filter(
+          (item) => (item.id || item._id) !== (data.id || data._id));
+
+        const sameCategoryProducts = filteredProducts.filter((item) => {
+          const itemCategory = item.category || item.categories?.[0] || '';
+
+          return (
+            itemCategory.trim().toLowerCase() === currentCategory.trim().toLowerCase());
+        });
+        const finalProducts = sameCategoryProducts.length > 0 ? sameCategoryProducts : filteredProducts;
+
+        setRelatedProducts(finalProducts.slice(0, 4));
+
       } catch (err) {
         console.error('[ProductDetails] Fetch error:', err.message);
-        if (active) setError(err.message || 'Failed to load product');
+
+        if (active) {
+          setError(err.message || 'Failed to load product');
+        }
       } finally {
-        if (active) setLoading(false);
+        if (active) {
+          setLoading(false);
+        }
       }
     }
 
@@ -243,6 +274,68 @@ export default function ProductDetailsPage() {
             </div>
           </section>
         )}
+
+        {!loading && relatedProducts.length > 0 && (
+          <section className="mt-12">
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-black uppercase tracking-[0.25em] text-emerald-600">
+                  Styling Picks
+                </p>
+
+                <h2 className="mt-2 text-3xl font-black text-slate-900">
+                  ✨ Complete the Look
+                </h2>
+              </div>
+            </div>
+
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {relatedProducts.map((item) => {
+                const image =
+                  item.images?.[0] ||
+                  item.image ||
+                  'https://placehold.co/600x600?text=Jewellery';
+
+                return (
+                  <Link
+                    key={item.id || item._id}
+                    href={`/products/${item.id || item._id}`}
+                    className="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+                  >
+                    <div className="relative h-64 w-full overflow-hidden">
+                      <Image
+                        src={image}
+                        alt={item.title}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 25vw"
+                        className="object-cover transition duration-300 group-hover:scale-105"
+                      />
+                    </div>
+
+                    <div className="p-4">
+                      <p className="text-xs font-bold uppercase tracking-wider text-emerald-600">
+                        {item.category || item.categories?.[0]}
+                      </p>
+
+                      <h3 className="mt-2 line-clamp-2 text-lg font-black text-slate-900">
+                        {item.title}
+                      </h3>
+
+                      <p className="mt-3 text-base font-black text-emerald-700">
+                        ₹{Number(item.price || 0).toLocaleString('en-IN')}
+                      </p>
+
+                      <button className="mt-4 w-full rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700">
+                        View Details
+                      </button>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
       </main>
     </div>
   );
