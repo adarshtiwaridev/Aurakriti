@@ -104,7 +104,7 @@ export default function ProductDetailsPage() {
           ? related
           : related.products || [];
 
-        const currentCategory =data.category || data.categories?.[0] ||  '';
+        const currentCategory = data.category || data.categories?.[0] ||  '';
 
         const filteredProducts = productsArray.filter(
           (item) => (item.id || item._id) !== (data.id || data._id));
