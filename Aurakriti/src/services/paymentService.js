@@ -83,6 +83,14 @@ export async function processPayment({ checkoutData, customer }) {
     throw new Error('Invalid Razorpay order payload received from server.');
   }
 
+  if (razorpayOrder.mode === 'mock' || razorpayOrder.mock) {
+    return finalizeOrder(checkoutData.orderId, {
+      razorpay_order_id: razorpayOrder.id,
+      razorpay_payment_id: `mock_payment_${Date.now()}`,
+      razorpay_signature: 'mock_signature',
+    });
+  }
+
   const loaded = await loadScript('https://checkout.razorpay.com/v1/checkout.js');
   if (!loaded || !window.Razorpay) {
     throw new Error('Unable to load Razorpay checkout.');

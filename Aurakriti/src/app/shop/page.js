@@ -3,14 +3,14 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useDispatch } from 'react-redux';
 import { useRouter } from 'next/navigation';
-import Navbar from '@/components/ecommerce/Navbar';
+import { useSearchParams, usePathname } from 'next/navigation';
 import ProductCard from '@/components/ProductCard';
+
 import LoadingSkeleton from '@/components/ecommerce/LoadingSkeleton';
 import { useCart } from '@/hooks/useCart';
-import { setCart } from '@/redux/slices/cartSlice';
+import { addToCart, setCart } from '@/redux/slices/cartSlice';
 import { addToCart as addToCartRequest } from '@/services/cartService';
 import { useAuth } from '@/hooks/useAuth';
-import Footer from '@/app/main/footer';
 import { Search, Filter, X } from 'lucide-react';
 
 // Cache for products to avoid refetching
@@ -22,16 +22,35 @@ export default function ShopPage() {
   const dispatch = useDispatch();
   const { items: cartItems } = useCart();
   const { isAuthenticated, user, initialized } = useAuth();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState(['All']);
-  const [activeCategory, setActiveCategory] = useState('All');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [activeCategory, setActiveCategory] = useState(searchParams.get('category') || 'All');
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState('');
-  const [sortBy, setSortBy] = useState('newest');
+  const [sortBy, setSortBy] = useState(searchParams.get('sortBy') || 'newest');
   const [showSidebar, setShowSidebar] = useState(false);
-  const [priceRange, setPriceRange] = useState([0, 5000]);
+  const [priceMin, setPriceMin] = useState(Number(searchParams.get('priceMin') || 0));
+  const [priceMax, setPriceMax] = useState(Number(searchParams.get('priceMax') || 5000));
+  const [ratingGte, setRatingGte] = useState(Number(searchParams.get('ratingGte') || 0));
+  const [inStock, setInStock] = useState(searchParams.get('inStock') === 'true');
+
+  const updateFilters = useCallback((name, value) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value !== '' && value !== undefined && value !== null && value !== false) {
+      params.set(name, String(value));
+    } else {
+      params.delete(name);
+    }
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [searchParams, pathname, router]);
+
+
+
 
   // Debounce search term
   useEffect(() => {
@@ -41,57 +60,43 @@ export default function ShopPage() {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Load products on mount
+  // Update URL on debounce
   useEffect(() => {
+    updateFilters('search', debouncedSearchTerm || '');
+  }, [debouncedSearchTerm, updateFilters]);
+
+
+// Fetch products with current params
+  useEffect(() => {
+    setLoading(true);
     let active = true;
 
-    async function loadProducts() {
-      try {
-        // Check if we already have cached products
-        if (productCache && categoryCache) {
-          setProducts(productCache);
-          setCategories(categoryCache);
-          setLoading(false);
-          return;
-        }
-
-        const response = await fetch('/api/products', { 
-          credentials: 'include'
-        });
-        const payload = await response.json();
-        
-        if (!active) return;
-        
-        if (payload.success && payload.data?.products) {
-          productCache = payload.data.products;
-          const uniqueCategories = ['All', ...[...new Set(payload.data.products.map(p => p.category).filter(Boolean))]];
-          categoryCache = uniqueCategories;
-          setProducts(productCache);
-          setCategories(categoryCache);
-        } else throw new Error('API failed');
-      } catch (error) {
-        try {
-          const data = await import('@/app/data/products.json');
-          productCache = data.products.map(p => ({ ...p, isDemo: true })); // Mark as demo products
-          const uniqueCategories = ['All', ...[...new Set(data.products.map(p => p.category))]];
-          categoryCache = uniqueCategories;
-          setProducts(productCache);
-          setCategories(categoryCache);
-        } catch {
-          console.error('Failed to load products:', error);
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
+    const params = new URLSearchParams(searchParams.toString());
+    fetch(`/api/products?${params.toString()}`, { 
+      credentials: 'include'
+    })
+    .then(res => res.json())
+    .then(payload => {
+      if (!active) return;
+      if (payload.success) {
+        setProducts(payload.data.products || []);
+        setCategories(payload.data.categories || ['All']);
+      } else {
+        // Fallback
+        import('@/app/data/products.json').then(data => {
+          setProducts(data.products || []);
+          setCategories(['All', ...new Set(data.products.map(p => p.category))]);
+        }).catch(() => {});
       }
-    }
+    })
+    .catch(error => console.error('Failed to load products:', error))
+    .finally(() => {
+      if (active) setLoading(false);
+    });
 
-    loadProducts();
-    return () => {
-      active = false;
-    };
-  }, []);
+    return () => { active = false; };
+  }, [searchParams]);
+
 
   // Memoize category counts
   const categoryCounts = useMemo(() => {
@@ -102,84 +107,42 @@ export default function ShopPage() {
     return counts;
   }, [products]);
 
-  // Filter and sort products
-  const filteredProducts = useMemo(() => {
-    let result = [...products];
-
-    // Category filter
-    if (activeCategory !== 'All') {
-      result = result.filter(p => p.category === activeCategory);
-    }
-
-    // Search filter (using debounced term)
-    const query = debouncedSearchTerm.trim().toLowerCase();
-    if (query) {
-      result = result.filter(p => 
-        (p.name || p.title || '').toLowerCase().includes(query) ||
-        (p.description || '').toLowerCase().includes(query) ||
-        (p.category || '').toLowerCase().includes(query)
-      );
-    }
-
-    // Price range filter
-    result = result.filter(p => p.price >= priceRange[0] && p.price <= priceRange[1]);
-
-    // Sorting
-    const sorted = [...result];
-    switch (sortBy) {
-      case 'price-low':
-        sorted.sort((a, b) => a.price - b.price);
-        break;
-      case 'price-high':
-        sorted.sort((a, b) => b.price - a.price);
-        break;
-      case 'rating':
-        sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0));
-        break;
-      case 'newest':
-      default:
-        sorted.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-        break;
-    }
-
-    return sorted;
-  }, [products, activeCategory, debouncedSearchTerm, sortBy, priceRange]);
+// Products now server-filtered
 
   const handleAddToCart = useCallback(async (product) => {
-    // Check if this is a demo product
-    if (product.isDemo) {
-      setToastMessage('Demo products cannot be added to cart. Please connect to database for full functionality.');
-      setTimeout(() => setToastMessage(''), 3000);
-      return;
-    }
-
-    // Wait for auth initialization
     if (!initialized) {
       setToastMessage('Please wait while we verify your account...');
       setTimeout(() => setToastMessage(''), 2000);
       return;
     }
 
-    if (!isAuthenticated) {
-      router.push('/auth/login');
-      return;
-    }
-
-    if (user?.role !== 'user') {
+    if (isAuthenticated && user?.role !== 'user') {
       setToastMessage('Seller accounts cannot buy products.');
       setTimeout(() => setToastMessage(''), 2200);
       return;
     }
 
     try {
-      const cart = await addToCartRequest(product.id, 1);
-      dispatch(setCart(cart.items ?? []));
+      if (!isAuthenticated || product.isDemo) {
+        dispatch(addToCart({
+          id: product.id,
+          productId: product.id,
+          title: product.name || product.title,
+          price: Number(product.price || 0),
+          image: product.images?.[0] || product.image || '',
+          category: product.category || '',
+          quantity: 1,
+        }));
+      } else {
+        const cart = await addToCartRequest(product.id, 1);
+        dispatch(setCart(cart.items ?? []));
+      }
       setToastMessage(`${product.name || product.title} added to cart`);
     } catch (error) {
       setToastMessage(error.message || 'Failed to add product to cart');
     }
     setTimeout(() => setToastMessage(''), 2200);
-  }, [isAuthenticated, user, router, dispatch, initialized]);
+  }, [dispatch, initialized, isAuthenticated, user]);
 
   const cartQuantity = useMemo(() => 
     cartItems.reduce((total, item) => total + item.quantity, 0),
@@ -188,9 +151,7 @@ export default function ShopPage() {
 
   return (
     <div className="min-h-screen bg-[#f8fafb] text-slate-900">
-      <Navbar cartCount={cartQuantity} searchTerm={searchTerm} onSearch={setSearchTerm} />
-      
-      <main className="pt-24 pb-20">
+      <main className="pb-20">
         {/* Page Header */}
         <div className="border-b border-slate-200 bg-white shadow-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -221,10 +182,11 @@ export default function ShopPage() {
                 <h3 className="text-sm font-black uppercase tracking-[0.15em] text-slate-700 mb-4">Categories</h3>
                 <div className="space-y-2">
                   {categories.map(category => (
-                    <button
+                <button
                       key={category}
                       onClick={() => {
                         setActiveCategory(category);
+                        updateFilters('category', category === activeCategory ? '' : category);
                         setShowSidebar(false);
                       }}
                       className={`w-full text-left px-4 py-3 rounded-lg font-semibold transition ${
@@ -233,6 +195,7 @@ export default function ShopPage() {
                           : 'text-slate-700 hover:bg-slate-100'
                       }`}
                     >
+
                       <span className="flex items-center justify-between">
                         {category}
                         <span className="text-xs font-semibold">
@@ -254,9 +217,13 @@ export default function ShopPage() {
                     min="0"
                     max="5000"
                     value={priceRange[1]}
-                    onChange={(e) => setPriceRange([priceRange[0], Number(e.target.value)])}
+                    onChange={(e) => {
+                      setPriceRange([priceRange[0], Number(e.target.value)]);
+                      updateFilters('priceMax', e.target.value);
+                    }}
                     className="w-full accent-green-600"
                   />
+
                 </div>
               </div>
 
@@ -265,14 +232,19 @@ export default function ShopPage() {
                 <h3 className="text-sm font-black uppercase tracking-[0.15em] text-slate-700 mb-4">Sort By</h3>
                 <select
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
+                  onChange={(e) => {
+                    setSortBy(e.target.value);
+                    updateFilters('sortBy', e.target.value);
+                  }}
                   className="w-full px-4 py-2 border border-slate-200 rounded-lg font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-green-500"
                 >
                   <option value="newest">Newest</option>
                   <option value="price-low">Price: Low to High</option>
                   <option value="price-high">Price: High to Low</option>
                   <option value="rating">Highest Rating</option>
+                  <option value="popular">Popular</option>
                 </select>
+
               </div>
             </aside>
 
@@ -346,7 +318,6 @@ export default function ShopPage() {
         </div>
       )}
 
-      <Footer />
     </div>
   );
 }

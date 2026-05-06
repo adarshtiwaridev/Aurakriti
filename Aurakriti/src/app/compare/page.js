@@ -4,8 +4,6 @@ import { useSelector, useDispatch } from 'react-redux';
 import { removeFromCompare, clearCompare } from '@/redux/slices/compareSlice';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Navbar from '@/components/ecommerce/Navbar';
-import { useCart } from '@/hooks/useCart';
 
 const ROWS = [
   { key: 'image',       label: 'Image' },
@@ -106,13 +104,11 @@ export default function ComparePage() {
   const dispatch = useDispatch();
   const router = useRouter();
   const products = useSelector((state) => state.compare.items);
-  const { cartCount } = useCart();
 
   if (products.length === 0) {
     return (
       <div className="min-h-screen bg-slate-50">
-        <Navbar searchTerm="" onSearch={() => {}} cartCount={cartCount} />
-        <main className="mx-auto max-w-3xl px-4 pb-20 pt-32 text-center">
+        <main className="mx-auto max-w-3xl px-4 py-12 text-center sm:px-6 lg:px-8">
           <div className="rounded-3xl border border-dashed border-slate-200 bg-white p-16 shadow-sm">
             <div className="mb-4 text-5xl">⇄</div>
             <h1 className="text-2xl font-black text-slate-900">No products selected</h1>
@@ -131,9 +127,7 @@ export default function ComparePage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Navbar searchTerm="" onSearch={() => {}} cartCount={cartCount} />
-
-      <main className="mx-auto max-w-7xl px-4 pb-20 pt-28 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
@@ -212,7 +206,7 @@ export default function ComparePage() {
                 {products.map((product) => (
                   <td key={product.id} className="px-5 py-4 text-center">
                     <Link
-                      href="/"
+                      href={`/products/${product.id}`}
                       className="inline-flex items-center justify-center rounded-full bg-green-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-green-100 hover:bg-green-700"
                     >
                       View Product

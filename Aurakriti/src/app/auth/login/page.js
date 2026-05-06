@@ -125,7 +125,7 @@ export default function LoginPage() {
           </div>
 
           <Link
-            href="/auth/forgot-password"
+            href="/auth/login/forgot-password"
             className="text-sm font-medium text-indigo-600 hover:text-indigo-500 transition-colors"
           >
             Forgot password?
@@ -176,7 +176,7 @@ export default function LoginPage() {
             Login with demo account: cyber / 1234
           </button>
           <Link
-            href="/products"
+            href="/shop"
             className="text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors flex items-center justify-center"
           >
             <Check className="h-4 w-4 mr-1" />

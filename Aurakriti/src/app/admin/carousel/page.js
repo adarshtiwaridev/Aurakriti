@@ -215,7 +215,7 @@ export default function AdminCarouselPage() {
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Offer Label <span className="text-gray-400 font-normal">(e.g. "20% OFF")</span></label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Offer Label <span className="text-gray-400 font-normal">(e.g. &quot;20% OFF&quot;)</span></label>
                 <input value={form.offerLabel} onChange={(e) => setForm((f) => ({ ...f, offerLabel: e.target.value }))}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
               </div>

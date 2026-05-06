@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { RefreshCw, Download, Truck, PackageCheck, CircleDot, Box, XCircle, MapPin } from 'lucide-react';
-import Navbar from '@/components/ecommerce/Navbar';
 import { useAuth } from '@/hooks/useAuth';
 import { generateInvoiceForOrder, getOrders } from '@/services/orderService';
 
@@ -99,11 +99,6 @@ export default function UserOrdersPage() {
     };
   }, [isAuthenticated, user?.role, loadOrders]);
 
-  const cartCount = useMemo(
-    () => orders.reduce((acc, order) => acc + (order.items?.reduce((iAcc, item) => iAcc + Number(item.quantity || 0), 0) || 0), 0),
-    [orders]
-  );
-
   const handleDownloadInvoice = async (order) => {
     try {
       const orderId = order.id;
@@ -138,9 +133,7 @@ export default function UserOrdersPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#fffcf8] to-white">
-      <Navbar cartCount={cartCount} searchTerm="" onSearch={() => {}} />
-
-      <main className="mx-auto max-w-7xl px-4 pb-14 pt-28 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.35em] text-[#9f7a40]">Aurakriti Orders</p>
@@ -235,7 +228,13 @@ export default function UserOrdersPage() {
                       {(order.items || []).map((item) => (
                         <div key={item.id} className="flex items-center gap-3 rounded-xl border border-[#f3eadc] p-3">
                           {item.image ? (
-                            <img src={item.image} alt={item.title} className="h-16 w-16 rounded-lg object-cover object-center" loading="lazy" />
+                            <Image
+                              src={item.image}
+                              alt={item.title}
+                              width={64}
+                              height={64}
+                              className="rounded-lg object-cover object-center"
+                            />
                           ) : (
                             <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-[#f6ecde] text-[#c9a14a]">✦</div>
                           )}

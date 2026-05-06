@@ -24,7 +24,8 @@ export async function getProducts(params = {}) {
   const query = buildQuery(params);
   const response = await fetch(`/api/products${query ? `?${query}` : ''}`, {
     credentials: 'include',
-    cache: 'no-store',
+    cache: 'force-cache',
+    next: { revalidate: 300 },
   });
 
   return parseResponse(response);
@@ -67,6 +68,41 @@ export async function updateProduct(id, product) {
 
 export async function deleteProduct(id) {
   const response = await fetch(`/api/products/${id}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+
+  return parseResponse(response);
+}
+
+export async function createReview(productId, review) {
+  const response = await fetch(`/api/products/${productId}/reviews`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(review),
+  });
+
+  return parseResponse(response);
+}
+
+export async function updateReview(productId, reviewId, review) {
+  const response = await fetch(`/api/products/${productId}/reviews`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify({ reviewId, ...review }),
+  });
+
+  return parseResponse(response);
+}
+
+export async function deleteReview(productId, reviewId) {
+  const response = await fetch(`/api/products/${productId}/reviews?reviewId=${encodeURIComponent(reviewId)}`, {
     method: 'DELETE',
     credentials: 'include',
   });

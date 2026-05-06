@@ -3,7 +3,7 @@ import connectDB from '@/lib/db';
 import { requireAuth, requireRole } from '@/lib/api-auth';
 import Order, { ORDER_STATUS_FLOW, ORDER_STATUS_VALUES } from '@/models/Order';
 import { sendOrderStatusEmail } from '@/lib/email';
-import { mapOrder } from '@/lib/order-utils';
+import { mapOrder, orderPopulateConfig } from '@/lib/order-utils';
 import { notifyUserOrderStatus } from '@/lib/notifications';
 import { generateAndStoreInvoice } from '@/lib/invoice';
 import mongoose from 'mongoose';
@@ -152,7 +152,7 @@ export async function GET(request, context) {
 
   const baseQuery = { ...accessQuery, _id: resolvedOrderId };
 
-  const order = await Order.findOne(baseQuery).populate('user', 'name email role').lean();
+  const order = await Order.findOne(baseQuery).populate(orderPopulateConfig).lean();
   if (!order) {
     return NextResponse.json({ success: false, message: 'Order not found.' }, { status: 404 });
   }
@@ -262,7 +262,7 @@ export async function PATCH(request, context) {
 
     await order.save();
 
-    const populatedOrder = await Order.findById(order._id).populate('user', 'name email');
+    const populatedOrder = await Order.findById(order._id).populate(orderPopulateConfig);
 
     // Generate invoice as soon as order reaches confirmed/shipped and payment is successful.
     if (

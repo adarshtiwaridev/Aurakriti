@@ -3,7 +3,7 @@ import connectDB from '@/lib/db';
 import { requireAuth } from '@/lib/api-auth';
 import Order from '@/models/Order';
 import { sendOrderConfirmationEmail } from '@/lib/email';
-import { finalizeOrderPayment, mapOrder } from '@/lib/order-utils';
+import { finalizeOrderPayment, mapOrder, orderPopulateConfig } from '@/lib/order-utils';
 import { notifySellersForNewOrder } from '@/lib/notifications';
 import mongoose from 'mongoose';
 import { generateAndStoreInvoice } from '@/lib/invoice';
@@ -31,7 +31,7 @@ export async function GET(request) {
   }
 
   const orders = await Order.find(query)
-    .populate('user', 'name email role')
+    .populate(orderPopulateConfig)
     .sort({ createdAt: -1 })
     .lean();
 
