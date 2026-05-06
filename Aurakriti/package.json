@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --webpack" , 
+    "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -12,7 +12,12 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@mediapipe/face_detection": "^0.4.1646425229",
+    "@mediapipe/face_mesh": "^0.4.1633559619",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.1",
     "@reduxjs/toolkit": "^2.11.2",
+    "@tensorflow/tfjs": "^4.22.0",
     "axios": "^1.14.0",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.9.0",
@@ -37,6 +42,8 @@
     "recharts": "^3.8.1",
     "sonner": "^2.0.7",
     "stripe": "^22.0.1",
+    "three": "^0.184.0",
+    "sharp": "^0.32.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

@@ -9,6 +9,7 @@ import { getProduct } from '@/services/productService';
 import { addToCart as addToCartRequest } from '@/services/cartService';
 import { useDispatch } from 'react-redux';
 import { addToCart, setCart } from '@/redux/slices/cartSlice';
+import { Camera } from 'lucide-react';
 
 function ProductDetailSkeleton() {
   return (
@@ -224,6 +225,13 @@ export default function ProductDetailsPage() {
                   className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {adding ? 'Adding...' : 'Add to Cart'}
+                </button>
+                <button
+                  onClick={() => window.location.href = `/try-on/${productId}`}
+                  className="rounded-xl bg-purple-600 hover:bg-purple-700 px-5 py-3 text-sm font-semibold text-white transition flex items-center gap-2"
+                >
+                  <Camera className="w-4 h-4" />
+                  Virtual Try-On
                 </button>
                 <button
                   type="button"
