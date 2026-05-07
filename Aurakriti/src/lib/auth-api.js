@@ -179,6 +179,30 @@ export const signupHandler = withErrorHandling('Signup', async (request) => {
   let otpSentAt = null;
   let otpRecord = null;
 
+  // Development bypass: Auto-verify user if email not configured
+  const isEmailConfigured = !!(process.env.EMAIL_USER && process.env.EMAIL_PASS);
+
+  if (!isEmailConfigured) {
+    // Auto-verify user for development without email
+    user.isVerified = true;
+    await user.save();
+    
+    // Generate token for immediate login
+    const token = generateToken({ userId: user._id, email: user.email, role: user.role });
+    setAuthCookie(token);
+    
+    return createSuccessResponse(
+      'Account created and verified successfully (development mode).',
+      {
+        user: sanitizeUser(user),
+        token,
+        isVerified: true,
+        redirectTo: getDashboardRoute(user.role)
+      },
+      201
+    );
+  }
+
   try {
     otpRecord = await createAndSendOtp(user, VERIFICATION_PURPOSE);
     otpSent = true;

@@ -21,8 +21,8 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [query, setQuery] = useState("");
-
+  const [query, setQuery]         = useState("");
+  const [mounted, setMounted]     = useState(false);
   const { cartCount } = useCart();
   const { user, isAuthenticated, initialized, logout } = useAuth();
 
@@ -52,7 +52,8 @@ export default function Navbar() {
      SCROLL EFFECT
   ---------------------------- */
   useEffect(() => {
-    const handler = () => setScrolled(window.scrollY > 10);
+    setMounted(true);
+    const handler = () => setScrolled(window.scrollY > 8);
     window.addEventListener("scroll", handler, { passive: true });
     return () => window.removeEventListener("scroll", handler);
   }, []);
@@ -217,7 +218,18 @@ export default function Navbar() {
                 </Link>
               ))}
 
-              <hr />
+              <Link href="/user/cart" className="icon-btn relative" aria-label="Cart">
+                <CartIcon />
+                {mounted && cartCount > 0 && (
+                  <span className="
+                    absolute -top-1 -right-1
+                    bg-indigo-500 text-white text-[9px] font-bold
+                    w-4 h-4 rounded-full flex items-center justify-center
+                  ">
+                    {cartCount > 9 ? "9+" : cartCount}
+                  </span>
+                )}
+              </Link>
 
               {isAuthenticated ? (
                 <>
