@@ -236,4 +236,250 @@ function PlaceholderImage({ category = "" }) {
       {emoji}
     </div>
   );
+}"use client";
+
+import Link from "next/link";
+import Image from "next/image";
+import { useState } from "react";
+
+/* ---------------------------
+   PRODUCT CARD
+---------------------------- */
+export default function ProductCard({
+  product,
+  compact = false,
+  onAddToCart,
+}) {
+  const [added, setAdded] = useState(false);
+  const [wishlisted, setWishlisted] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const {
+    id,
+    _id,
+    name,
+    title,
+    price,
+    originalPrice,
+    images,
+    image,
+    category,
+    rating = 0,
+    reviewCount = 0,
+    badge,
+    stock = 99,
+  } = product;
+
+  const productId = id || _id;
+  const productTitle = name || title || "Product";
+  const imgSrc = images?.[0] || image || null;
+
+  const outOfStock = stock <= 0;
+
+  const discount =
+    originalPrice && originalPrice > price
+      ? Math.round(((originalPrice - price) / originalPrice) * 100)
+      : null;
+
+  /* ---------------------------
+     ADD TO CART
+  ---------------------------- */
+  const handleAddToCart = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!onAddToCart || outOfStock || loading) return;
+
+    try {
+      setLoading(true);
+
+      await onAddToCart({
+        ...product,
+        id: productId,
+        title: productTitle,
+        image: imgSrc || "",
+      });
+
+      setAdded(true);
+      setTimeout(() => setAdded(false), 1200);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ---------------------------
+     WISHLIST
+  ---------------------------- */
+  const handleWishlist = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setWishlisted((v) => !v);
+  };
+
+  return (
+    <Link href={`/products/${productId}`} className="block group">
+      <article
+        className="
+          flex flex-col h-full overflow-hidden rounded-2xl
+          border border-gray-100 bg-white shadow-sm
+          hover:shadow-lg transition-all duration-200
+        "
+      >
+
+        {/* ---------------- IMAGE ---------------- */}
+        <div
+          className="relative overflow-hidden bg-gray-50"
+          style={{ aspectRatio: compact ? "4/3" : "1/1" }}
+        >
+          {imgSrc ? (
+            <Image
+              src={imgSrc}
+              alt={productTitle}
+              fill
+              sizes="(max-width: 768px) 50vw, 25vw"
+              className="object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+          ) : (
+            <Placeholder category={category} />
+          )}
+
+          {/* BADGE */}
+          {badge && !outOfStock && (
+            <span className="absolute top-2 left-2 text-xs px-2 py-1 rounded-full bg-black/70 text-white">
+              {badge === "sale" && discount ? `${discount}% OFF` : badge}
+            </span>
+          )}
+
+          {/* OUT OF STOCK */}
+          {outOfStock && (
+            <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+              <span className="text-xs font-bold text-red-500">
+                Out of stock
+              </span>
+            </div>
+          )}
+
+          {/* WISHLIST */}
+          <button
+            onClick={handleWishlist}
+            className="
+              absolute top-2 right-2 w-8 h-8 rounded-full
+              bg-white shadow flex items-center justify-center
+              opacity-0 group-hover:opacity-100 transition
+            "
+            aria-label="Wishlist"
+          >
+            <Heart filled={wishlisted} />
+          </button>
+        </div>
+
+        {/* ---------------- INFO ---------------- */}
+        <div className="flex flex-col flex-1 p-3 gap-1.5">
+
+          <p className="text-[10px] uppercase tracking-wide text-gray-400">
+            {category}
+          </p>
+
+          <h3 className="text-sm font-semibold text-gray-900 line-clamp-2">
+            {productTitle}
+          </h3>
+
+          {/* RATING */}
+          {reviewCount > 0 && (
+            <div className="flex items-center gap-1">
+              <Stars rating={rating} />
+              <span className="text-[11px] text-gray-400">
+                ({reviewCount})
+              </span>
+            </div>
+          )}
+
+          {/* PRICE */}
+          <div className="flex items-center justify-between mt-auto pt-2">
+            <div>
+              <span className="font-bold text-gray-900">
+                ₹{price.toLocaleString("en-IN")}
+              </span>
+
+              {originalPrice && originalPrice > price && (
+                <span className="ml-2 text-xs line-through text-gray-400">
+                  ₹{originalPrice.toLocaleString("en-IN")}
+                </span>
+              )}
+            </div>
+
+            {/* ADD BUTTON */}
+            <button
+              onClick={handleAddToCart}
+              disabled={outOfStock || loading}
+              className="
+                w-9 h-9 rounded-lg flex items-center justify-center
+                text-white font-bold transition
+                disabled:opacity-40 disabled:cursor-not-allowed
+              "
+              style={{
+                background: added
+                  ? "#16a34a"
+                  : loading
+                  ? "#6366f1"
+                  : "#4f46e5",
+              }}
+            >
+              {loading ? "…" : added ? "✓" : "+"}
+            </button>
+          </div>
+        </div>
+      </article>
+    </Link>
+  );
+}
+
+/* ---------------------------
+   STARS
+---------------------------- */
+function Stars({ rating }) {
+  return (
+    <div className="flex">
+      {[1, 2, 3, 4, 5].map((s) => (
+        <svg
+          key={s}
+          width="12"
+          height="12"
+          viewBox="0 0 20 20"
+          fill={s <= Math.round(rating) ? "#F59E0B" : "#E5E7EB"}
+        >
+          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+        </svg>
+      ))}
+    </div>
+  );
+}
+
+/* ---------------------------
+   HEART ICON
+---------------------------- */
+function Heart({ filled }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill={filled ? "#ef4444" : "none"}
+      stroke={filled ? "#ef4444" : "#94a3b8"}
+      strokeWidth="2"
+    >
+      <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+    </svg>
+  );
+}
+
+/* ---------------------------
+   PLACEHOLDER
+---------------------------- */
+function Placeholder({ category }) {
+  return (
+    <div className="w-full h-full flex items-center justify-center bg-indigo-50 text-4xl">
+      🛍️
+    </div>
+  );
 }
