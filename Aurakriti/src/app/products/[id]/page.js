@@ -1,15 +1,16 @@
-import ProductClient from './ProductClient';
+'use client';
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { BadgeCheck, MessageSquare, Pencil, ShoppingBag, Star, Trash2, Truck } from 'lucide-react';
-import { useDispatch } from 'react-redux';
 import { useAuth } from '@/hooks/useAuth';
 import { getProduct, getProducts } from '@/services/productService';
 import { addToCart as addToCartRequest } from '@/services/cartService';
-import { createReview, deleteReview, getProduct, updateReview } from '@/services/productService';
+import { useDispatch } from 'react-redux';
+import { addToCart, setCart } from '@/redux/slices/cartSlice';
+import { Camera, Star, BadgeCheck, MessageSquare, Pencil, ShoppingBag, Truck, Trash2 } from 'lucide-react';
+import { createReview, deleteReview, updateReview } from '@/services/productService';
 
 const EMPTY_REVIEW = { rating: 5, title: '', comment: '' };
 
@@ -42,53 +43,75 @@ function RatingStars({ rating, editable = false, onChange = null }) {
 
 function ProductDetailSkeleton() {
   return (
-    <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-      <div className="space-y-4">
-        <div className="skeleton h-[28rem] rounded-[2rem]" />
-        <div className="grid grid-cols-4 gap-3">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="skeleton h-24 rounded-2xl" />
+    <section className="mt-6 grid gap-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:grid-cols-[1fr_1fr]">
+      <div className="animate-pulse">
+        <div className="h-[28rem] w-full rounded-3xl bg-slate-200" />
+        <div className="mt-3 grid grid-cols-4 gap-2">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="h-20 rounded-xl bg-slate-200" />
           ))}
         </div>
       </div>
-      <div className="space-y-4">
-        <div className="skeleton h-4 w-24" />
-        <div className="skeleton h-10 w-3/4" />
-        <div className="skeleton h-8 w-40" />
-        <div className="skeleton h-24 w-full" />
-        <div className="skeleton h-14 w-full rounded-2xl" />
-        <div className="skeleton h-40 w-full rounded-[2rem]" />
+      <div className="animate-pulse space-y-4">
+        <div className="h-4 w-24 rounded-full bg-slate-200" />
+        <div className="h-10 w-3/4 rounded-xl bg-slate-200" />
+        <div className="h-6 w-32 rounded-xl bg-slate-200" />
+        <div className="space-y-2">
+          <div className="h-4 rounded bg-slate-200" />
+          <div className="h-4 rounded bg-slate-200" />
+          <div className="h-4 w-2/3 rounded bg-slate-200" />
+        </div>
+        <div className="flex gap-3 pt-4">
+          <div className="h-12 w-32 rounded-xl bg-slate-200" />
+          <div className="h-12 w-44 rounded-xl bg-slate-200" />
+        </div>
       </div>
+    </section>
+  );
+}
+
+function ErrorCard({ message, productId }) {
+  return (
+    <div className="mt-10 flex flex-col items-center rounded-3xl border border-red-100 bg-red-50 px-6 py-14 text-center">
+      <svg className="h-14 w-14 text-red-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+      </svg>
+      <h2 className="mt-4 text-xl font-black text-slate-800">Product not found</h2>
+      <p className="mt-2 max-w-sm text-sm text-slate-500">{message}</p>
+      <Link href="/products" className="mt-6 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800">
+        Browse Products
+      </Link>
     </div>
   );
 }
 
-export default function ProductDetailsPage() {
+export default function ProductDetail() {
   const params = useParams();
   const router = useRouter();
+  const productId = params.id;
+  const { user } = useAuth();
   const dispatch = useDispatch();
-  const { isAuthenticated, user, initialized } = useAuth();
+
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [pageError, setPageError] = useState('');
-  const [actionMessage, setActionMessage] = useState('');
-  const [adding, setAdding] = useState(false);
+  const [error, setError] = useState(null);
+  const [quantity, setQuantity] = useState(1);
+  const [selectedImage, setSelectedImage] = useState(0);
+  const [addingToCart, setAddingToCart] = useState(false);
+
+  // Review states
+  const [reviews, setReviews] = useState([]);
   const [reviewLoading, setReviewLoading] = useState(false);
   const [activeImage, setActiveImage] = useState(0);
   const [relatedProducts, setRelatedProducts] = useState([]);
 
   const productId = params?.id;
+  const [myReview, setMyReview] = useState(null);
+  const [editingReviewId, setEditingReviewId] = useState(null);
+  const [reviewForm, setReviewForm] = useState(EMPTY_REVIEW);
 
   useEffect(() => {
-    if (!productId) {
-      setPageError('No product selected.');
-      setLoading(false);
-      return;
-    }
-
-    let active = true;
-
-    async function loadProduct() {
+    const loadProduct = async () => {
       try {
         setLoading(true);
         setError('');
@@ -127,118 +150,63 @@ export default function ProductDetailsPage() {
         if (active) {
           setError(err.message || 'Failed to load product');
         }
+        const data = await getProduct(productId);
+        setProduct(data);
+        setReviews(data.reviews || []);
+        setMyReview(data.reviews?.find(r => r.userId === user?.id));
+      } catch (err) {
+        setError(err.message || 'Product not found');
       } finally {
-        if (active) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
-    }
-
-    loadProduct();
-    return () => {
-      active = false;
     };
-  }, [productId]);
 
-  useEffect(() => () => window.clearTimeout(bannerTimerRef.current), []);
-
-  const images = useMemo(() => {
-    if (product?.images?.length) {
-      return product.images;
+    if (productId) {
+      loadProduct();
     }
-    return product?.image ? [product.image] : [];
-  }, [product]);
-
-  const myReview = useMemo(
-    () => (product?.reviews || []).find((review) => review.isOwner),
-    [product?.reviews]
-  );
-
-  const showBanner = (message) => {
-    setActionMessage(message);
-    window.clearTimeout(bannerTimerRef.current);
-    bannerTimerRef.current = window.setTimeout(() => setActionMessage(''), 2500);
-  };
+  }, [productId, user]);
 
   const handleAddToCart = async () => {
-    if (!product) {
+    if (!user) {
+      router.push('/login');
       return;
     }
 
-    if (!initialized) {
-      setPageError('Please wait while we verify your account.');
-      return;
-    }
-
-    if (isAuthenticated && user?.role !== 'user') {
-      setPageError('Seller and admin accounts cannot place buyer orders.');
-      return;
-    }
-
+    setAddingToCart(true);
     try {
-      setAdding(true);
-      setPageError('');
-
-      if (!isAuthenticated || product.isDemo) {
-        dispatch(
-          addToCart({
-            id: product.id,
-            productId: product.id,
-            title: product.title,
-            price: Number(product.price || 0),
-            image: product.images?.[0] || product.image || '',
-            category: product.category || '',
-            quantity: 1,
-          })
-        );
-      } else {
-        const cart = await addToCartRequest(product.id, 1);
-        dispatch(setCart(cart.items ?? []));
-      }
-
-      showBanner('Product added to cart.');
-    } catch (error) {
-      setPageError(error.message || 'Failed to add product to cart.');
+      await addToCartRequest(productId, quantity);
+      // Update Redux state
+      dispatch(addToCart({
+        productId,
+        quantity,
+        price: product.price,
+        title: product.title,
+        image: product.images?.[0] || product.image
+      }));
+    } catch (err) {
+      console.error('Add to cart error:', err);
     } finally {
-      setAdding(false);
+      setAddingToCart(false);
     }
   };
 
-  const startEditing = (review) => {
-    setEditingReviewId(review.id);
-    setReviewForm({
-      rating: review.rating,
-      title: review.title || '',
-      comment: review.comment || '',
-    });
-  };
-
-  const resetReviewForm = () => {
-    setEditingReviewId('');
-    setReviewForm(EMPTY_REVIEW);
-  };
-
-  const handleReviewSubmit = async (event) => {
-    event.preventDefault();
-
-    if (!isAuthenticated) {
-      router.push(`/auth/login?redirect=/products/${productId}`);
-      return;
-    }
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    setReviewLoading(true);
 
     try {
-      setReviewLoading(true);
-      setPageError('');
-
-      const response = editingReviewId
-        ? await updateReview(productId, editingReviewId, reviewForm)
-        : await createReview(productId, reviewForm);
-
-      setProduct(response.product);
-      resetReviewForm();
-      showBanner(editingReviewId ? 'Review updated.' : 'Review added.');
-    } catch (error) {
-      setPageError(error.message || 'Unable to save review.');
+      if (editingReviewId) {
+        const updated = await updateReview(editingReviewId, reviewForm);
+        setReviews(reviews.map(r => r.id === editingReviewId ? updated : r));
+        setEditingReviewId(null);
+      } else {
+        const newReview = await createReview(productId, reviewForm);
+        setReviews([...reviews, newReview]);
+        setMyReview(newReview);
+      }
+      setReviewForm(EMPTY_REVIEW);
+    } catch (err) {
+      console.error('Review error:', err);
     } finally {
       setReviewLoading(false);
     }
@@ -246,279 +214,231 @@ export default function ProductDetailsPage() {
 
   const handleReviewDelete = async (reviewId) => {
     try {
-      setReviewLoading(true);
-      setPageError('');
-      const response = await deleteReview(productId, reviewId);
-      setProduct(response.product);
-      resetReviewForm();
-      showBanner('Review deleted.');
-    } catch (error) {
-      setPageError(error.message || 'Unable to delete review.');
-    } finally {
-      setReviewLoading(false);
+      await deleteReview(reviewId);
+      setReviews(reviews.filter(r => r.id !== reviewId));
+      if (reviewId === myReview?.id) {
+        setMyReview(null);
+      }
+    } catch (err) {
+      console.error('Delete review error:', err);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[linear-gradient(180deg,#fffdf8_0%,#f6f8fb_100%)]">
-        <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-          <ProductDetailSkeleton />
-        </main>
-      </div>
-    );
-  }
+  if (loading) return <ProductDetailSkeleton />;
+  if (error) return <ErrorCard message={error} productId={productId} />;
+  if (!product) return null;
 
-  if (!product) {
-    return (
-      <div className="min-h-screen bg-[linear-gradient(180deg,#fffdf8_0%,#f6f8fb_100%)]">
-        <main className="mx-auto max-w-4xl px-4 py-20 text-center sm:px-6 lg:px-8">
-          <div className="rounded-[2rem] border border-rose-100 bg-white p-10 shadow-sm">
-            <h1 className="text-3xl font-semibold text-stone-900">Product not found</h1>
-            <p className="mt-3 text-sm text-stone-500">{pageError || 'This item is unavailable right now.'}</p>
-            <Link href="/shop" className="mt-6 inline-flex rounded-full bg-stone-900 px-5 py-3 text-sm font-semibold text-white">
-              Back to shop
-            </Link>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  const displayImage = images[activeImage] || 'https://placehold.co/900x900?text=Product';
+  const images = product.images || [product.image];
+  const inStock = product.stock > 0;
+  const discount = product.discountPrice && product.price > product.discountPrice;
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#fffdf8_0%,#f6f8fb_100%)] text-stone-900">
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <Link href="/shop" className="text-sm font-semibold text-stone-500 transition hover:text-stone-900">
-            Back to shop
-          </Link>
-          <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-amber-800">
-            <BadgeCheck className="h-4 w-4" />
-            Trusted product listing
+    <section className="mt-6 grid gap-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm lg:grid-cols-[1fr_1fr]">
+      {/* Images */}
+      <div>
+        <div className="relative h-[28rem] w-full overflow-hidden rounded-3xl bg-slate-100">
+          <Image
+            src={images[selectedImage]}
+            alt={product.title}
+            fill
+            className="object-cover"
+            sizes="(max-width: 1024px) 100vw, 50vw"
+            priority
+          />
+          {!inStock && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+              <span className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white">Out of Stock</span>
+            </div>
+          )}
+          {discount && (
+            <div className="absolute left-4 top-4 rounded-xl bg-red-600 px-3 py-1 text-sm font-semibold text-white">
+              {Math.round((1 - product.discountPrice / product.price) * 100)}% OFF
+            </div>
+          )}
+        </div>
+        <div className="mt-3 grid grid-cols-4 gap-2">
+          {images.map((img, idx) => (
+            <button
+              key={idx}
+              onClick={() => setSelectedImage(idx)}
+              className={`relative h-20 overflow-hidden rounded-xl border-2 transition ${
+                selectedImage === idx ? 'border-slate-900' : 'border-transparent'
+              }`}
+            >
+              <Image src={img} alt={`${product.title} ${idx + 1}`} fill className="object-cover" sizes="80px" />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Details */}
+      <div className="flex flex-col">
+        <div className="flex-1">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-black text-slate-900">{product.title}</h1>
+              <p className="mt-1 text-sm text-slate-600">{product.description}</p>
+            </div>
+          </div>
+
+          <div className="mt-4 flex items-center gap-4">
+            <div className="flex items-center gap-1">
+              <RatingStars rating={product.rating} />
+              <span className="ml-1 text-sm text-slate-600">({product.reviews?.length || 0})</span>
+            </div>
+            {product.verified && (
+              <div className="flex items-center gap-1 text-emerald-600">
+                <BadgeCheck className="h-4 w-4" />
+                <span className="text-sm font-medium">Verified</span>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4">
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-black text-slate-900">
+                {formatPrice(discount ? product.discountPrice : product.price)}
+              </span>
+              {discount && (
+                <span className="text-lg text-slate-500 line-through">{formatPrice(product.price)}</span>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700">Quantity</label>
+              <div className="mt-1 flex items-center gap-2">
+                <button
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  className="rounded-lg border border-slate-300 p-2 text-slate-600 transition hover:bg-slate-50"
+                  disabled={quantity <= 1}
+                >
+                  -
+                </button>
+                <span className="w-12 text-center font-medium">{quantity}</span>
+                <button
+                  onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
+                  className="rounded-lg border border-slate-300 p-2 text-slate-600 transition hover:bg-slate-50"
+                  disabled={quantity >= product.stock}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleAddToCart}
+                disabled={!inStock || addingToCart}
+                className="flex-1 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:bg-slate-300 disabled:cursor-not-allowed"
+              >
+                {addingToCart ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    Adding...
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-2">
+                    <ShoppingBag className="h-4 w-4" />
+                    Add to Cart
+                  </span>
+                )}
+              </button>
+              
+              <button
+                onClick={() => window.location.href = `/try-on/${productId}`}
+                className="rounded-xl bg-purple-600 hover:bg-purple-700 px-5 py-3 text-sm font-semibold text-white transition flex items-center gap-2"
+              >
+                <Camera className="w-4 h-4" />
+                Virtual Try-On
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-8 space-y-4 border-t border-slate-200 pt-8">
+            <div className="flex items-center gap-3 text-sm text-slate-600">
+              <Truck className="h-4 w-4" />
+              <span>Free delivery on orders above ₹999</span>
+            </div>
+            <div className="flex items-center gap-3 text-sm text-slate-600">
+              <MessageSquare className="h-4 w-4" />
+              <span>24/7 customer support</span>
+            </div>
           </div>
         </div>
 
-        {actionMessage ? (
-          <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
-            {actionMessage}
-          </div>
-        ) : null}
-
-        {pageError ? (
-          <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
-            {pageError}
-          </div>
-        ) : null}
-
-        <section className="grid gap-8 rounded-[2rem] border border-stone-200 bg-white p-5 shadow-[0_24px_70px_-48px_rgba(24,24,27,0.32)] lg:grid-cols-[1.1fr_0.9fr] lg:p-8">
-          <div className="space-y-4">
-            <div className="relative h-[24rem] overflow-hidden rounded-[1.8rem] bg-stone-100 sm:h-[30rem]">
-              <Image src={displayImage} alt={product.title} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 55vw" />
-            </div>
-            <div className="grid grid-cols-4 gap-3">
-              {(images.length ? images : [displayImage]).slice(0, 4).map((image, index) => (
-                <button
-                  key={`${image}-${index}`}
-                  type="button"
-                  onClick={() => setActiveImage(index)}
-                  className={`relative h-24 overflow-hidden rounded-2xl border transition ${activeImage === index ? 'border-stone-900 shadow-sm' : 'border-stone-200 hover:border-stone-400'}`}
-                >
-                  <Image src={image} alt={`${product.title} ${index + 1}`} fill className="object-cover" sizes="160px" />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-6">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-700">{product.category}</p>
-              <h1 className="mt-3 text-3xl font-semibold leading-tight text-stone-950 sm:text-4xl">{product.title}</h1>
-
-              <div className="mt-4 flex flex-wrap items-center gap-4">
-                <span className="text-3xl font-semibold text-stone-950">{formatPrice(product.price)}</span>
-                <div className="inline-flex items-center gap-2 rounded-full bg-stone-100 px-3 py-2 text-sm text-stone-700">
-                  <RatingStars rating={product.rating} />
-                  <span className="font-semibold">{product.rating?.toFixed?.(1) ?? Number(product.rating || 0).toFixed(1)}</span>
-                  <span className="text-stone-400">({product.reviewCount || 0})</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Stock</p>
-                <p className={`mt-2 text-sm font-semibold ${product.stock > 0 ? 'text-emerald-700' : 'text-rose-600'}`}>
-                  {product.stock > 0 ? `${product.stock} available` : 'Out of stock'}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Delivery</p>
-                <p className="mt-2 text-sm font-semibold text-stone-800">Fast dispatch</p>
-              </div>
-              <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-stone-500">Seller</p>
-                <p className="mt-2 text-sm font-semibold text-stone-800">{product.seller?.name || 'Aurakriti'}</p>
-              </div>
-            </div>
-
-            <div className="rounded-[1.6rem] border border-stone-200 bg-[linear-gradient(135deg,#fff8eb_0%,#ffffff_100%)] p-5">
-              <h2 className="text-lg font-semibold text-stone-900">About this item</h2>
-              <p className="mt-3 text-sm leading-7 text-stone-600">{product.description}</p>
-              {product.tags?.length ? (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {product.tags.map((tag) => (
-                    <span key={tag} className="rounded-full border border-stone-200 bg-white px-3 py-1 text-xs font-medium text-stone-600">
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <button
-                onClick={handleAddToCart}
-                disabled={adding || product.stock <= 0}
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-stone-900 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-stone-700 disabled:cursor-not-allowed disabled:bg-stone-300"
-              >
-                <ShoppingBag className="h-4 w-4" />
-                {adding ? 'Adding...' : 'Add to cart'}
-              </button>
-              <button
-                type="button"
-                onClick={() => window.dispatchEvent(new CustomEvent('eco:open-chatbot', { detail: { query: product.title } }))}
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-stone-200 bg-white px-5 py-3.5 text-sm font-semibold text-stone-800 transition hover:bg-stone-50"
-              >
-                <MessageSquare className="h-4 w-4" />
-                Ask AI about this product
-              </button>
-            </div>
-
-            <div className="rounded-[1.6rem] border border-stone-200 bg-stone-50 p-5">
-              <div className="flex items-center gap-3">
-                <Truck className="h-5 w-5 text-amber-700" />
-                <div>
-                  <h3 className="font-semibold text-stone-900">Checkout confidence</h3>
-                  <p className="text-sm text-stone-500">Supports COD and Razorpay checkout with full order tracking.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="mt-8 grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
-          <article className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
+        {/* Reviews Section */}
+        <div className="mt-8 border-t border-slate-200 pt-8">
+          <h3 className="text-lg font-semibold text-slate-900">Customer Reviews</h3>
+          
+          {/* Review Form */}
+          {user && (
+            <form onSubmit={handleReviewSubmit} className="mt-4 space-y-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">Ratings</p>
-                <h2 className="mt-2 text-2xl font-semibold text-stone-950">Customer reviews</h2>
+                <label className="block text-sm font-medium text-slate-700">Rating</label>
+                <RatingStars
+                  rating={reviewForm.rating}
+                  editable
+                  onChange={(rating) => setReviewForm({ ...reviewForm, rating })}
+                />
               </div>
-              <div className="text-right">
-                <p className="text-3xl font-semibold text-stone-950">{Number(product.rating || 0).toFixed(1)}</p>
-                <p className="text-sm text-stone-500">{product.reviewCount || 0} review(s)</p>
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Title</label>
+                <input
+                  type="text"
+                  value={reviewForm.title}
+                  onChange={(e) => setReviewForm({ ...reviewForm, title: e.target.value })}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
+                  placeholder="Brief summary of your review"
+                />
               </div>
-            </div>
-
-            <form onSubmit={handleReviewSubmit} className="mt-6 space-y-4 rounded-[1.6rem] border border-stone-200 bg-stone-50 p-5">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h3 className="font-semibold text-stone-900">{editingReviewId ? 'Edit your review' : 'Write a review'}</h3>
-                  <p className="text-sm text-stone-500">Share quality, fit, finish, and delivery experience.</p>
-                </div>
-                <RatingStars editable rating={reviewForm.rating} onChange={(rating) => setReviewForm((prev) => ({ ...prev, rating }))} />
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Review</label>
+                <textarea
+                  value={reviewForm.comment}
+                  onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
+                  rows={3}
+                  placeholder="Share your experience with this product"
+                />
               </div>
-
-              <input
-                value={reviewForm.title}
-                onChange={(event) => setReviewForm((prev) => ({ ...prev, title: event.target.value }))}
-                placeholder="Review title"
-                className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-stone-400"
-              />
-              <textarea
-                value={reviewForm.comment}
-                onChange={(event) => setReviewForm((prev) => ({ ...prev, comment: event.target.value }))}
-                placeholder={isAuthenticated ? 'Tell future buyers what stood out.' : 'Log in to leave a review.'}
-                rows={5}
-                className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-stone-400"
-              />
-
-              <div className="flex flex-wrap gap-3">
+              <div className="flex gap-2">
                 <button
                   type="submit"
                   disabled={reviewLoading || (!editingReviewId && Boolean(myReview))}
                   className="rounded-full bg-stone-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-stone-700 disabled:bg-stone-300"
                 >
-                  {reviewLoading ? 'Saving...' : editingReviewId ? 'Update review' : myReview ? 'Add another review not allowed' : 'Submit review'}
+                  {reviewLoading ? 'Submitting...' : editingReviewId ? 'Update Review' : 'Submit Review'}
                 </button>
-                {editingReviewId ? (
+                {editingReviewId && (
                   <button
                     type="button"
-                    onClick={resetReviewForm}
-                    className="rounded-full border border-stone-200 bg-white px-5 py-3 text-sm font-semibold text-stone-700"
+                    onClick={() => {
+                      setEditingReviewId(null);
+                      setReviewForm(EMPTY_REVIEW);
+                    }}
+                    className="rounded-full border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
                   >
                     Cancel
                   </button>
-                ) : null}
+                )}
               </div>
-
-              {myReview && !editingReviewId ? (
-                <p className="text-xs text-stone-500">You already reviewed this product. Edit your existing review below.</p>
-              ) : null}
             </form>
-          </article>
+          )}
 
-          <article className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">All reviews</p>
-                <h2 className="mt-2 text-2xl font-semibold text-stone-950">What buyers are saying</h2>
-              </div>
-            </div>
-
-            <div className="mt-6 space-y-4">
-              {(product.reviews || []).length === 0 ? (
-                <div className="rounded-[1.6rem] border border-dashed border-stone-300 bg-stone-50 p-8 text-center">
-                  <p className="font-semibold text-stone-900">No reviews yet</p>
-                  <p className="mt-2 text-sm text-stone-500">Be the first buyer to share feedback on this product.</p>
-                </div>
-              ) : (
-                product.reviews.map((review) => (
-                  <div key={review.id} className="rounded-[1.6rem] border border-stone-200 bg-stone-50 p-5">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="font-semibold text-stone-900">{review.name}</p>
-                        <div className="mt-2 flex items-center gap-3">
-                          <RatingStars rating={review.rating} />
-                          <span className="text-xs text-stone-500">
-                            {new Date(review.updatedAt || review.createdAt).toLocaleDateString('en-IN')}
-                          </span>
-                        </div>
-                      </div>
-                      {review.isOwner ? (
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => startEditing(review)}
-                            className="inline-flex items-center gap-1 rounded-full border border-stone-200 bg-white px-3 py-2 text-xs font-semibold text-stone-700"
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleReviewDelete(review.id)}
-                            className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            Delete
-                          </button>
-                        </div>
-                      ) : null}
+          {/* Reviews List */}
+          <div className="mt-6 space-y-4">
+            {reviews.map((review) => (
+              <div key={review.id} className="rounded-xl border border-slate-200 p-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-slate-900">{review.userName}</span>
+                      <RatingStars rating={review.rating} />
                     </div>
-                    {review.title ? <p className="mt-3 text-sm font-semibold text-stone-900">{review.title}</p> : null}
-                    <p className="mt-2 text-sm leading-7 text-stone-600">{review.comment}</p>
+                    <h4 className="mt-1 font-medium text-slate-900">{review.title}</h4>
+                    <p className="mt-1 text-sm text-slate-600">{review.comment}</p>
                   </div>
                 ))
               )}
@@ -631,4 +551,35 @@ export async function generateMetadata({ params }) {
 
 export default function ProductDetailsPage() {
   return <ProductClient />;
+                  {user && review.userId === user.id && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setEditingReviewId(review.id);
+                          setReviewForm({
+                            rating: review.rating,
+                            title: review.title,
+                            comment: review.comment
+                          });
+                        }}
+                        className="text-slate-400 hover:text-slate-600"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleReviewDelete(review.id)}
+                        className="text-slate-400 hover:text-red-600"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
 }

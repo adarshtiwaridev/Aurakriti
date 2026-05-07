@@ -4,17 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
 
-/**
- * ProductCard — generic, works for any product category.
- *
- * Props:
- *  product: {
- *    _id, name, price, originalPrice?, images[], category,
- *    rating, reviewCount, badge? ("sale"|"hot"|"new"), stock
- *  }
- *  onAddToCart?: (product) => void | Promise<void>
- *  compact?: boolean  — smaller card for sidebar / related
- */
+
 export default function ProductCard({ product, compact = false, onAddToCart }) {
   const [added, setAdded] = useState(false);
   const [wishlisted, setWishlisted] = useState(false);
