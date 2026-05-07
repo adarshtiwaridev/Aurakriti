@@ -215,7 +215,7 @@ export async function GET(request) {
       },
     });
   }
-}
+
 
 export async function POST(request) {
   const auth = await requireRole(request, ['seller', 'admin']);

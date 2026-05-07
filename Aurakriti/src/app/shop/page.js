@@ -2,20 +2,14 @@
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useDispatch } from 'react-redux';
-import { useRouter } from 'next/navigation';
-import { useSearchParams, usePathname } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import ProductCard from '@/components/ProductCard';
-
 import LoadingSkeleton from '@/components/ecommerce/LoadingSkeleton';
 import { useCart } from '@/hooks/useCart';
 import { addToCart, setCart } from '@/redux/slices/cartSlice';
 import { addToCart as addToCartRequest } from '@/services/cartService';
 import { useAuth } from '@/hooks/useAuth';
 import { Search, Filter, X } from 'lucide-react';
-
-// Cache for products to avoid refetching
-let productCache = null;
-let categoryCache = null;
 
 export default function ShopPage() {
   const router = useRouter();
@@ -25,96 +19,84 @@ export default function ShopPage() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
 
+  // States
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState(['All']);
   const [activeCategory, setActiveCategory] = useState(searchParams.get('category') || 'All');
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState('');
   const [sortBy, setSortBy] = useState(searchParams.get('sortBy') || 'newest');
   const [showSidebar, setShowSidebar] = useState(false);
-  const [priceMin, setPriceMin] = useState(Number(searchParams.get('priceMin') || 0));
-  const [priceMax, setPriceMax] = useState(Number(searchParams.get('priceMax') || 5000));
-  const [ratingGte, setRatingGte] = useState(Number(searchParams.get('ratingGte') || 0));
-  const [inStock, setInStock] = useState(searchParams.get('inStock') === 'true');
 
+  // Helper to update URL params
   const updateFilters = useCallback((name, value) => {
     const params = new URLSearchParams(searchParams.toString());
-    if (value !== '' && value !== undefined && value !== null && value !== false) {
+    if (value && value !== 'All' && value !== '' && value !== false) {
       params.set(name, String(value));
     } else {
       params.delete(name);
     }
+    // Reset to page 1 if filtering
+    if (name !== 'page') params.delete('page'); 
+    
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }, [searchParams, pathname, router]);
 
-
-
-
-  // Debounce search term
+  // Handle Search Debounce
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
-
-  // Update URL on debounce
-  useEffect(() => {
-    updateFilters('search', debouncedSearchTerm || '');
-  }, [debouncedSearchTerm, updateFilters]);
-
-
-// Fetch products with current params
-  useEffect(() => {
-    setLoading(true);
-    let active = true;
-
-    const params = new URLSearchParams(searchParams.toString());
-    fetch(`/api/products?${params.toString()}`, { 
-      credentials: 'include'
-    })
-    .then(res => res.json())
-    .then(payload => {
-      if (!active) return;
-      if (payload.success) {
-        setProducts(payload.data.products || []);
-        setCategories(payload.data.categories || ['All']);
-      } else {
-        // Fallback
-        import('@/app/data/products.json').then(data => {
-          setProducts(data.products || []);
-          setCategories(['All', ...new Set(data.products.map(p => p.category))]);
-        }).catch(() => {});
+      if (searchTerm !== (searchParams.get('search') || '')) {
+        updateFilters('search', searchTerm);
       }
-    })
-    .catch(error => console.error('Failed to load products:', error))
-    .finally(() => {
-      if (active) setLoading(false);
-    });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchTerm, updateFilters, searchParams]);
 
-    return () => { active = false; };
+  // Fetch products when URL params change
+  useEffect(() => {
+    let isMounted = true;
+    const fetchProducts = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch(`/api/products?${searchParams.toString()}`, {
+          credentials: 'include'
+        });
+        const payload = await response.json();
+
+        if (isMounted) {
+          if (payload.success) {
+            setProducts(payload.data.products || []);
+            // Update categories if the backend provides them, otherwise keep default
+            if (payload.data.categories) setCategories(['All', ...payload.data.categories]);
+          } else {
+            // Fallback to local data if API fails
+            const data = await import('@/app/data/products.json');
+            setProducts(data.products || []);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load products:', error);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchProducts();
+    return () => { isMounted = false; };
   }, [searchParams]);
 
-
-  // Memoize category counts
+  // Memoized calculations
   const categoryCounts = useMemo(() => {
     const counts = { All: products.length };
     products.forEach(p => {
-      counts[p.category] = (counts[p.category] || 0) + 1;
+      if (p.category) counts[p.category] = (counts[p.category] || 0) + 1;
     });
     return counts;
   }, [products]);
 
-// Products now server-filtered
-
   const handleAddToCart = useCallback(async (product) => {
-    if (!initialized) {
-      setToastMessage('Please wait while we verify your account...');
-      setTimeout(() => setToastMessage(''), 2000);
-      return;
-    }
+    if (!initialized) return;
 
     if (isAuthenticated && user?.role !== 'user') {
       setToastMessage('Seller accounts cannot buy products.');
@@ -125,34 +107,28 @@ export default function ShopPage() {
     try {
       if (!isAuthenticated || product.isDemo) {
         dispatch(addToCart({
-          id: product.id,
-          productId: product.id,
-          title: product.name || product.title,
+          id: product._id || product.id,
+          productId: product._id || product.id,
+          title: product.title || product.name,
           price: Number(product.price || 0),
           image: product.images?.[0] || product.image || '',
           category: product.category || '',
           quantity: 1,
         }));
       } else {
-        const cart = await addToCartRequest(product.id, 1);
+        const cart = await addToCartRequest(product._id || product.id, 1);
         dispatch(setCart(cart.items ?? []));
       }
-      setToastMessage(`${product.name || product.title} added to cart`);
+      setToastMessage(`${product.title || product.name} added to cart`);
     } catch (error) {
-      setToastMessage(error.message || 'Failed to add product to cart');
+      setToastMessage(error.message || 'Failed to add to cart');
     }
     setTimeout(() => setToastMessage(''), 2200);
   }, [dispatch, initialized, isAuthenticated, user]);
 
-  const cartQuantity = useMemo(() => 
-    cartItems.reduce((total, item) => total + item.quantity, 0),
-    [cartItems]
-  );
-
   return (
     <div className="min-h-screen bg-[#f8fafb] text-slate-900">
       <main className="pb-20">
-        {/* Page Header */}
         <div className="border-b border-slate-200 bg-white shadow-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <h1 className="text-4xl font-black text-slate-900">Shop</h1>
@@ -160,146 +136,100 @@ export default function ShopPage() {
           </div>
         </div>
 
-        {/* Main Content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex gap-6 lg:gap-8">
             {/* Sidebar */}
-            <aside className={`fixed inset-y-0 left-0 top-24 z-40 w-64 border-r border-slate-200 bg-white overflow-y-auto p-6 transition-transform duration-300 lg:relative lg:top-0 lg:z-0 lg:translate-x-0 ${
+            <aside className={`fixed inset-y-0 left-0 top-0 z-50 w-64 border-r border-slate-200 bg-white overflow-y-auto p-6 transition-transform duration-300 lg:relative lg:translate-x-0 ${
               showSidebar ? 'translate-x-0' : '-translate-x-full'
             }`}>
               <div className="flex items-center justify-between mb-6 lg:hidden">
-                <h2 className="text-lg font-bold text-slate-900">Filters</h2>
-                <button 
-                  onClick={() => setShowSidebar(false)}
-                  className="p-2 hover:bg-slate-100 rounded-lg"
-                >
-                  <X size={20} />
-                </button>
+                <h2 className="text-lg font-bold">Filters</h2>
+                <button onClick={() => setShowSidebar(false)}><X size={20} /></button>
               </div>
 
-              {/* Categories Section */}
               <div className="mb-8">
-                <h3 className="text-sm font-black uppercase tracking-[0.15em] text-slate-700 mb-4">Categories</h3>
-                <div className="space-y-2">
-                  {categories.map(category => (
-                <button
-                      key={category}
+                <h3 className="text-sm font-black uppercase tracking-widest text-slate-700 mb-4">Categories</h3>
+                <div className="space-y-1">
+                  {categories.map(cat => (
+                    <button
+                      key={cat}
                       onClick={() => {
-                        setActiveCategory(category);
-                        updateFilters('category', category === activeCategory ? '' : category);
+                        setActiveCategory(cat);
+                        updateFilters('category', cat);
                         setShowSidebar(false);
                       }}
-                      className={`w-full text-left px-4 py-3 rounded-lg font-semibold transition ${
-                        activeCategory === category
-                          ? 'bg-green-600 text-white'
-                          : 'text-slate-700 hover:bg-slate-100'
+                      className={`w-full flex items-center justify-between px-4 py-2 rounded-lg font-semibold transition ${
+                        activeCategory === cat ? 'bg-green-600 text-white' : 'hover:bg-slate-100'
                       }`}
                     >
-
-                      <span className="flex items-center justify-between">
-                        {category}
-                        <span className="text-xs font-semibold">
-                          {categoryCounts[category] || 0}
-                        </span>
-                      </span>
+                      <span>{cat}</span>
+                      <span className="text-xs opacity-70">{categoryCounts[cat] || 0}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Price Range Filter */}
-              <div className="mb-8">
-                <h3 className="text-sm font-black uppercase tracking-[0.15em] text-slate-700 mb-4">Price Range</h3>
-                <div>
-                  <label className="text-xs text-slate-600">Max: ₹{priceRange[1]}</label>
-                  <input
-                    type="range"
-                    min="0"
-                    max="5000"
-                    value={priceRange[1]}
-                    onChange={(e) => {
-                      setPriceRange([priceRange[0], Number(e.target.value)]);
-                      updateFilters('priceMax', e.target.value);
-                    }}
-                    className="w-full accent-green-600"
-                  />
-
-                </div>
-              </div>
-
-              {/* Sorting Options */}
               <div>
-                <h3 className="text-sm font-black uppercase tracking-[0.15em] text-slate-700 mb-4">Sort By</h3>
+                <h3 className="text-sm font-black uppercase tracking-widest text-slate-700 mb-4">Sort By</h3>
                 <select
                   value={sortBy}
                   onChange={(e) => {
                     setSortBy(e.target.value);
                     updateFilters('sortBy', e.target.value);
                   }}
-                  className="w-full px-4 py-2 border border-slate-200 rounded-lg font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
                 >
                   <option value="newest">Newest</option>
                   <option value="price-low">Price: Low to High</option>
                   <option value="price-high">Price: High to Low</option>
                   <option value="rating">Highest Rating</option>
-                  <option value="popular">Popular</option>
                 </select>
-
               </div>
             </aside>
 
-            {/* Mobile Sidebar Overlay */}
-            {showSidebar && (
-              <div 
-                className="fixed inset-0 bg-black/50 z-30 lg:hidden"
-                onClick={() => setShowSidebar(false)}
-              />
-            )}
-
-            {/* Product Grid */}
+            {/* Content Area */}
             <div className="flex-1">
-              {/* Top Bar */}
-              <div className="flex items-center justify-between gap-4 mb-6">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                    <input
-                      type="text"
-                      placeholder="Search products..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                    />
-                  </div>
+              <div className="flex items-center gap-4 mb-6">
+                <div className="relative flex-1">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                  <input
+                    type="text"
+                    placeholder="Search products..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                  />
                 </div>
                 <button 
                   onClick={() => setShowSidebar(true)}
-                  className="lg:hidden flex items-center gap-2 px-4 py-3 border border-slate-200 rounded-lg font-semibold text-slate-700 hover:bg-slate-50"
+                  className="lg:hidden flex items-center gap-2 px-4 py-3 border border-slate-200 rounded-lg font-semibold"
                 >
                   <Filter size={20} />
-                  Filters
                 </button>
               </div>
 
-              {/* Results Count */}
               <div className="mb-6 text-sm text-slate-600">
-                Showing {filteredProducts.length} product{filteredProducts.length !== 1 ? 's' : ''} 
+                Showing {products.length} product{products.length !== 1 ? 's' : ''} 
                 {activeCategory !== 'All' && ` in ${activeCategory}`}
               </div>
 
-              {/* Products Grid */}
               {loading ? (
                 <LoadingSkeleton />
-              ) : filteredProducts.length === 0 ? (
-                <div className="rounded-4xl border border-dashed border-slate-200 bg-white p-16 text-center">
-                  <p className="text-lg font-bold text-slate-900">No products found</p>
-                  <p className="mt-3 text-sm text-slate-500">Try adjusting your filters or search term</p>
+              ) : products.length === 0 ? (
+                <div className="rounded-3xl border-2 border-dashed border-slate-200 p-16 text-center">
+                  <p className="text-lg font-bold">No products found</p>
+                  <button 
+                    onClick={() => {setSearchTerm(''); updateFilters('search', '');}} 
+                    className="mt-4 text-green-600 underline"
+                  >
+                    Clear all filters
+                  </button>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredProducts.map(product => (
+                  {products.map(product => (
                     <ProductCard 
-                      key={product.id} 
+                      key={product._id || product.id} 
                       product={product} 
                       onAddToCart={handleAddToCart}
                     />
@@ -311,13 +241,11 @@ export default function ShopPage() {
         </div>
       </main>
 
-      {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg font-semibold animate-pulse">
+        <div className="fixed bottom-6 right-6 z-50 bg-green-600 text-white px-6 py-3 rounded-lg shadow-xl font-semibold animate-in fade-in slide-in-from-bottom-4">
           {toastMessage}
         </div>
       )}
-
     </div>
   );
 }
