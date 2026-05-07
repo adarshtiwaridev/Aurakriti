@@ -141,8 +141,9 @@ export const signupHandler = withErrorHandling('Signup', async (request) => {
     return createErrorResponse('Name, email, and password are required.', {}, 400);
   }
 
-  if (password.length < 6) {
-    return createErrorResponse('Password must be at least 6 characters long.', {}, 400);
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+  if (!passwordRegex.test(password)) {
+    return createErrorResponse('Password must be at least 8 characters long, and include an uppercase letter, a lowercase letter, and a number.', {}, 400);
   }
 
   if (!ALLOWED_SIGNUP_ROLES.includes(role)) {
@@ -436,8 +437,9 @@ export const resetPasswordHandler = withErrorHandling('Reset password', async (r
     return createErrorResponse('Email, OTP, and password are required.', {}, 400);
   }
 
-  if (password.length < 6) {
-    return createErrorResponse('Password must be at least 6 characters long.', {}, 400);
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+  if (!passwordRegex.test(password)) {
+    return createErrorResponse('Password must be at least 8 characters long, and include an uppercase letter, a lowercase letter, and a number.', {}, 400);
   }
 
   const user = await User.findOne({ email });
