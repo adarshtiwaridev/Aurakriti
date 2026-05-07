@@ -3,27 +3,51 @@
 import Link from "next/link";
 import { useState } from "react";
 
-/**
- * GenericCategories — horizontal scroll pill list + icon grid.
- *
- * Props:
- *   categories: Array<{ slug, label, emoji, productCount? }>
- *   onSelect?:  (slug: string) => void  — optional controlled mode
- *   defaultSelected?: string
- */
+/* ---------------------------
+   CATEGORY DATA
+---------------------------- */
 export const DEFAULT_CATEGORIES = [
-  { slug: "all",          label: "All",          emoji: "🛍️" },
-  { slug: "electronics",  label: "Electronics",   emoji: "📱", productCount: 1240 },
-  { slug: "footwear",     label: "Footwear",      emoji: "👟", productCount: 340 },
-  { slug: "fashion",      label: "Fashion",        emoji: "👗", productCount: 890 },
-  { slug: "home",         label: "Home & Living",  emoji: "🏠", productCount: 620 },
-  { slug: "sports",       label: "Sports",         emoji: "🏅", productCount: 410 },
-  { slug: "beauty",       label: "Beauty",         emoji: "💄", productCount: 310 },
-  { slug: "books",        label: "Books",          emoji: "📚", productCount: 205 },
-  { slug: "toys",         label: "Toys",           emoji: "🧸", productCount: 180 },
+  { slug: "all", label: "All", emoji: "🛍️" },
+  { slug: "electronics", label: "Electronics", emoji: "📱", productCount: 1240 },
+  { slug: "footwear", label: "Footwear", emoji: "👟", productCount: 340 },
+  { slug: "fashion", label: "Fashion", emoji: "👗", productCount: 890 },
+  { slug: "home", label: "Home & Living", emoji: "🏠", productCount: 620 },
+  { slug: "sports", label: "Sports", emoji: "🏅", productCount: 410 },
+  { slug: "beauty", label: "Beauty", emoji: "💄", productCount: 310 },
+  { slug: "books", label: "Books", emoji: "📚", productCount: 205 },
 ];
 
-export function CategoryPills({ categories = DEFAULT_CATEGORIES, onSelect, defaultSelected = "all" }) {
+/* ---------------------------
+   HERO SECTION (HOME)
+---------------------------- */
+export function Hero() {
+  return (
+    <div className="text-center py-14 px-4">
+      <h1 className="text-3xl sm:text-5xl font-bold text-gray-900">
+        Discover Products You’ll Love
+      </h1>
+      <p className="mt-3 text-gray-500 text-sm sm:text-base">
+        Smart categories • Fast browsing • Best deals in one place
+      </p>
+
+      <Link
+        href="/products"
+        className="inline-block mt-6 px-6 py-3 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition"
+      >
+        Start Shopping
+      </Link>
+    </div>
+  );
+}
+
+/* ---------------------------
+   CATEGORY PILLS (HOME)
+---------------------------- */
+export function CategoryPills({
+  categories = DEFAULT_CATEGORIES,
+  onSelect,
+  defaultSelected = "all",
+}) {
   const [active, setActive] = useState(defaultSelected);
 
   const handleClick = (slug) => {
@@ -32,26 +56,26 @@ export function CategoryPills({ categories = DEFAULT_CATEGORIES, onSelect, defau
   };
 
   return (
-    <div
-      className="flex gap-2 overflow-x-auto pb-1"
-      style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-    >
-      {categories.map(({ slug, label, emoji }) => {
-        const isActive = active === slug;
+    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide px-2">
+      {categories.map((c) => {
+        const isActive = active === c.slug;
+
         return (
           <button
-            key={slug}
-            onClick={() => handleClick(slug)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium shrink-0 transition-all"
+            key={c.slug}
+            onClick={() => handleClick(c.slug)}
+            className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium shrink-0 transition-all duration-200 hover:scale-[1.03]"
             style={{
-              background: isActive ? "var(--brand-500)" : "var(--surface-card)",
-              color:      isActive ? "#fff"             : "var(--gray-600)",
-              border:     isActive ? "none"             : "1px solid var(--gray-200)",
-              boxShadow:  isActive ? "var(--shadow-brand)" : "none",
+              background: isActive
+                ? "linear-gradient(135deg, #4F46E5, #6366F1)"
+                : "#ffffff",
+              color: isActive ? "#fff" : "#374151",
+              border: "1px solid #E5E7EB",
+              boxShadow: isActive ? "0 8px 20px rgba(79,70,229,0.25)" : "none",
             }}
           >
-            <span>{emoji}</span>
-            {label}
+            <span>{c.emoji}</span>
+            {c.label}
           </button>
         );
       })}
@@ -59,82 +83,65 @@ export function CategoryPills({ categories = DEFAULT_CATEGORIES, onSelect, defau
   );
 }
 
-export function CategoryGrid({ categories = DEFAULT_CATEGORIES.slice(1) }) {
+/* ---------------------------
+   CATEGORY GRID (HOME DISCOVERY)
+---------------------------- */
+export function CategoryGrid({
+  categories = DEFAULT_CATEGORIES.slice(1),
+}) {
   return (
-    <div className="grid grid-cols-4 sm:grid-cols-5 lg:grid-cols-9 gap-3">
+    <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-6 gap-4 px-2">
       {categories.map(({ slug, label, emoji, productCount }) => (
         <Link
           key={slug}
           href={`/products?category=${slug}`}
           className="
-            group flex flex-col items-center gap-2 p-3 rounded-xl
-            bg-white border border-gray-200 text-center
-            hover:border-indigo-300 hover:bg-indigo-50 transition-all
+            group flex flex-col items-center justify-center gap-2
+            p-4 rounded-2xl bg-white border border-gray-100
+            hover:shadow-lg hover:-translate-y-1 transition-all duration-200
           "
-          style={{ textDecoration: "none" }}
         >
-          <span
-            className="text-2xl leading-none group-hover:scale-110 transition-transform"
-            style={{ display: "block" }}
-          >
+          <span className="text-3xl group-hover:scale-110 transition-transform">
             {emoji}
           </span>
-          <span className="text-[11px] font-semibold text-gray-600 leading-tight">{label}</span>
-          {productCount != null && (
-            <span className="text-[10px] text-gray-400">{productCount.toLocaleString()}</span>
-          )}
+
+          <div className="text-center">
+            <p className="text-sm font-semibold text-gray-700">{label}</p>
+            <p className="text-[11px] text-gray-400">
+              {productCount?.toLocaleString()} items
+            </p>
+          </div>
+
+          <span className="text-[10px] text-indigo-500 opacity-0 group-hover:opacity-100 transition">
+            Explore →
+          </span>
         </Link>
       ))}
     </div>
   );
 }
 
-/**
- * PromoBanner — full-width dismissible sale strip.
- */
-export function PromoBanner({
-  title = "Weekend Sale — Up to 60% Off",
-  subtitle = "Limited time on Electronics & Fashion. Ends Sunday midnight.",
-  ctaLabel = "Shop the sale",
-  ctaHref = "/deals",
-  color = "green",   // "green" | "indigo" | "amber"
-}) {
-  const [dismissed, setDismissed] = useState(false);
-  if (dismissed) return null;
-
-  const themes = {
-    green:  { bg: "#F0FDF4", border: "#A7F3D0", titleColor: "#065F46", subColor: "#047857", btnBg: "#065F46" },
-    indigo: { bg: "var(--brand-50)", border: "var(--brand-200)", titleColor: "var(--brand-700)", subColor: "var(--brand-600)", btnBg: "var(--brand-600)" },
-    amber:  { bg: "#FFFBEB", border: "#FCD34D", titleColor: "#92400E", subColor: "#B45309", btnBg: "#92400E" },
-  };
-  const t = themes[color] ?? themes.green;
+/* ---------------------------
+   PRODUCT FILTER BAR (PRODUCT PAGE)
+---------------------------- */
+export function ProductFilters({ active, setActive }) {
+  const filters = ["all", "popular", "new", "discounted"];
 
   return (
-    <div
-      className="relative flex items-center justify-between gap-4 rounded-xl px-6 py-4 flex-wrap"
-      style={{ background: t.bg, border: `1px solid ${t.border}` }}
-    >
-      <div>
-        <p className="font-bold text-base" style={{ color: t.titleColor }}>🎉 {title}</p>
-        <p className="text-sm mt-0.5" style={{ color: t.subColor }}>{subtitle}</p>
-      </div>
-      <div className="flex items-center gap-3">
-        <Link
-          href={ctaHref}
-          className="btn btn-sm"
-          style={{ background: t.btnBg, color: "#fff", border: "none" }}
-        >
-          {ctaLabel}
-        </Link>
+    <div className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b px-3 py-2 flex gap-2 overflow-x-auto">
+      {filters.map((f) => (
         <button
-          onClick={() => setDismissed(true)}
-          aria-label="Dismiss"
-          className="text-lg leading-none opacity-40 hover:opacity-70 transition-opacity"
-          style={{ background: "none", border: "none", cursor: "pointer" }}
+          key={f}
+          onClick={() => setActive(f)}
+          className="px-4 py-1.5 rounded-full text-sm font-medium transition whitespace-nowrap"
+          style={{
+            background: active === f ? "#111827" : "#F3F4F6",
+            color: active === f ? "#fff" : "#374151",
+          }}
         >
-          ×
+          {f}
         </button>
-      </div>
+      ))}
     </div>
   );
 }
