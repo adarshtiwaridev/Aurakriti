@@ -189,9 +189,7 @@ export const signupHandler = withErrorHandling('Signup', async (request) => {
     
     // Generate token for immediate login
     const token = generateToken({ userId: user._id, email: user.email, role: user.role });
-    setAuthCookie(token);
-    
-    return createSuccessResponse(
+    const response = createSuccessResponse(
       'Account created and verified successfully (development mode).',
       {
         user: sanitizeUser(user),
@@ -201,6 +199,9 @@ export const signupHandler = withErrorHandling('Signup', async (request) => {
       },
       201
     );
+
+    setAuthCookie(response, token);
+    return response;
   }
 
   try {

@@ -59,28 +59,3 @@ export function mapProductDocument(product, currentUser = null) {
     isDemo: Boolean(product.isDemo),
   };
 }
-
-export function mapDemoProduct(product) {
-  return {
-    id: String(product.id),
-    title: product.name,
-    name: product.name,
-    description: product.description,
-    price: Number(product.price || 0),
-    category: product.category,
-    images: Array.isArray(product.images) ? product.images : [],
-    image: product.images?.[0] ?? '',
-    stock: Number(product.stock || 0),
-    rating: Number(product.rating || 0),
-    reviewCount: Number(product.reviewCount || product.reviews || 0),
-    reviews: [],
-    tags: Array.isArray(product.tags) ? product.tags : [],
-    sellerId: null,
-    seller: null,
-    createdAt: product.createdAt,
-    updatedAt: product.updatedAt || product.createdAt,
-    isFeatured: Boolean(product.isFeatured),
-    isActive: true,
-    isDemo: true,
-  };
-}
