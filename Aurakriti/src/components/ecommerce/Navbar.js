@@ -129,62 +129,53 @@ export default function Navbar() {
         {/* RIGHT: Actions */}
         <div className="flex items-center gap-2 sm:gap-4">
           <Link
-  href="/wishlist"
-  className="group relative flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-[#5d4b36] shadow-sm transition-colors duration-300 hover:bg-[#fff6e6]"
-  title="Wishlist"
->
-  ❤️
-</Link>
-          {/* Cart Button */}
-          {canUseCart && (
-            <Link
-              href="/user/cart"
-              className="group relative flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-[#5d4b36] shadow-sm transition-colors duration-300 hover:bg-[#fff6e6]"
-              title="Shopping Cart"
-            >
-              <SearchIcon />
-            </button>
+            href="/wishlist"
+            className="group relative flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-[#5d4b36] shadow-sm transition-colors duration-300 hover:bg-[#fff6e6]"
+            title="Wishlist"
+          >
+            ❤️
+          </Link>
 
-            {/* Dashboard */}
-            {isAuthenticated && (
-              <Link
-                href={dashboardHref}
+          {/* Cart */}
+          <Link href="/user/cart" className="icon-btn relative" title="Shopping Cart">
+            <CartIcon />
+            {mounted && cartCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-indigo-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+                {cartCount > 9 ? "9+" : cartCount}
+              </span>
+            )}
+          </Link>
+
+          {/* Dashboard */}
+          {isAuthenticated && (
+            <Link
+              href={dashboardHref}
+              className="hidden sm:inline-flex btn btn-ghost btn-sm"
+            >
+              Dashboard
+            </Link>
+          )}
+
+          {/* Auth */}
+          {initialized && isAuthenticated ? (
+            <>
+              <span className="hidden xl:block text-sm text-gray-600">
+                {user?.name}
+              </span>
+              <button
+                onClick={handleLogout}
                 className="hidden sm:inline-flex btn btn-ghost btn-sm"
               >
-                Dashboard
+                Logout
+              </button>
+            </>
+          ) : (
+            <>
+              <Link href="/auth/login" className="btn btn-primary btn-sm hidden sm:inline-flex">
+                Login
               </Link>
-            )}
-
-            {/* Cart */}
-            <Link href="/user/cart" className="icon-btn relative">
-              <CartIcon />
-              {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-indigo-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
-                  {cartCount > 9 ? "9+" : cartCount}
-                </span>
-              )}
-            </Link>
-
-            {/* Auth */}
-            {initialized && isAuthenticated ? (
-              <>
-                <span className="hidden xl:block text-sm text-gray-600">
-                  {user?.name}
-                </span>
-                <button
-                  onClick={handleLogout}
-                  className="hidden sm:inline-flex btn btn-ghost btn-sm"
-                >
-                  Logout
-                </button>
-              </>
-            ) : (
-              <>
-                <Link href="/auth/login" className="btn btn-primary btn-sm hidden sm:inline-flex">
-                  Login
-                </Link>
-              </>
-            )}
+            </>
+          )}
 
             {/* Mobile menu */}
             <button
