@@ -100,11 +100,8 @@ export default function ContactUs() {
       source: 'contact-page',
     };
 
-    console.debug('[ContactUs] Sending payload', payload);
-
     try {
-      const result = await submitContactMessage(payload);
-      console.debug('[ContactUs] Submission success', result);
+      await submitContactMessage(payload);
       setForm(INITIAL_FORM);
       setSuccessMessage('Thanks for reaching out. We have received your message.');
     } catch (error) {

@@ -9,6 +9,15 @@ function sanitizeInput(value) {
   return String(value || '').trim();
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function validatePayload(payload) {
   const name = sanitizeInput(payload?.name);
   const email = sanitizeInput(payload?.email).toLowerCase();
@@ -19,8 +28,16 @@ function validatePayload(payload) {
     return { ok: false, message: 'Please provide a valid name.' };
   }
 
+  if (name.length > 120) {
+    return { ok: false, message: 'Name must not exceed 120 characters.' };
+  }
+
   if (!email || !EMAIL_REGEX.test(email)) {
     return { ok: false, message: 'Please provide a valid email address.' };
+  }
+
+  if (email.length > 200) {
+    return { ok: false, message: 'Email must not exceed 200 characters.' };
   }
 
   if (!message || message.length < 10) {
@@ -43,15 +60,21 @@ function validatePayload(payload) {
 }
 
 function buildNotificationEmailHtml(doc) {
+  const safeName = escapeHtml(doc.name);
+  const safeEmail = escapeHtml(doc.email);
+  const safeSource = escapeHtml(doc.source);
+  const safeMessage = escapeHtml(doc.message);
+  const safeId = escapeHtml(doc._id);
+
   return `
     <div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;padding:20px;background:#fff;border:1px solid #eee;border-radius:12px;">
       <h2 style="margin:0 0 12px;color:#2f241b;">New Contact Inquiry</h2>
-      <p style="margin:4px 0;"><strong>Name:</strong> ${doc.name}</p>
-      <p style="margin:4px 0;"><strong>Email:</strong> ${doc.email}</p>
-      <p style="margin:4px 0;"><strong>Source:</strong> ${doc.source}</p>
+      <p style="margin:4px 0;"><strong>Name:</strong> ${safeName}</p>
+      <p style="margin:4px 0;"><strong>Email:</strong> ${safeEmail}</p>
+      <p style="margin:4px 0;"><strong>Source:</strong> ${safeSource}</p>
       <p style="margin:16px 0 6px;"><strong>Message:</strong></p>
-      <div style="white-space:pre-wrap;line-height:1.6;background:#faf7f2;padding:12px;border-radius:8px;">${doc.message}</div>
-      <p style="margin:14px 0 0;color:#777;font-size:12px;">Message ID: ${doc._id}</p>
+      <div style="white-space:pre-wrap;line-height:1.6;background:#faf7f2;padding:12px;border-radius:8px;">${safeMessage}</div>
+      <p style="margin:14px 0 0;color:#777;font-size:12px;">Message ID: ${safeId}</p>
     </div>
   `;
 }

@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { getProduct } from '@/services/productService';
 import { addToCart as addToCartRequest } from '@/services/cartService';
 import { useDispatch } from 'react-redux';
-import { addToCart, setCart } from '@/redux/slices/cartSlice';
+import { setCart } from '@/redux/slices/cartSlice';
 import { Camera, Star, BadgeCheck, MessageSquare, Pencil, ShoppingBag, Truck, Trash2 } from 'lucide-react';
 import { createReview, deleteReview, updateReview } from '@/services/productService';
 
@@ -135,15 +135,6 @@ export default function ProductDetail() {
     try {
       const cart = await addToCartRequest(productId, quantity);
       dispatch(setCart(cart.items ?? []));
-
-      dispatch(addToCart({
-        id: product.id,
-        productId,
-        quantity,
-        price: product.price,
-        title: product.title,
-        image: product.images?.[0] || product.image,
-      }));
     } catch (err) {
       console.error('Add to cart error:', err);
     } finally {
