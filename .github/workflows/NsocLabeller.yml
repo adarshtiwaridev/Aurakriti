@@ -1,0 +1,76 @@
+name: NSOC Label Automation
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  issues: write
+
+jobs:
+  nsoc-label:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Handle NSOC labeling
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const issueNumber = issue.number;
+            const title = (issue.title || "").toLowerCase();
+
+            const labelName = "NSOC'26";
+            const labelColor = "FFA500";
+
+            // -------------------------------
+            // 1. Robust NSOC detection
+            // -------------------------------
+            const nsocPattern = /nsoc[\s'’\-]*26/; 
+            const isNSOC = nsocPattern.test(title);
+
+            if (!isNSOC) {
+              console.log("Issue is not NSOC-related. Skipping.");
+              return;
+            }
+
+            // -------------------------------
+            // 2. Ensure label exists
+            // -------------------------------
+            try {
+              await github.rest.issues.getLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: labelName
+              });
+            } catch (err) {
+              await github.rest.issues.createLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: labelName,
+                color: labelColor,
+                description: "NSOC 2026 tagged issues"
+              });
+            }
+
+            // -------------------------------
+            // 3. Check existing labels (avoid duplicates)
+            // -------------------------------
+            const existingLabels = issue.labels.map(l => l.name);
+
+            if (existingLabels.includes(labelName)) {
+              console.log("Label already exists on issue.");
+              return;
+            }
+
+            // -------------------------------
+            // 4. Add label
+            // -------------------------------
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              labels: [labelName]
+            });
+
+            console.log(`Added ${labelName} to issue #${issueNumber}`);

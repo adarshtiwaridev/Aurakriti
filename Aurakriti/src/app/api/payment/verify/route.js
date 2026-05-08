@@ -3,7 +3,7 @@ import connectDB from '@/lib/db';
 import { requireRole } from '@/lib/api-auth';
 import Order from '@/models/Order';
 import PaymentSession from '@/models/PaymentSession';
-import { createOrderFromData, finalizeOrderPayment, mapOrder } from '@/lib/order-utils';
+import { createOrderFromData, finalizeOrderPayment, mapOrder, orderPopulateConfig } from '@/lib/order-utils';
 import { sendEmail, sendOrderConfirmationEmail } from '@/lib/email';
 import { notifySellersForNewOrder } from '@/lib/notifications';
 import { verifyPaymentSignature } from '@/lib/razorpay';
@@ -57,7 +57,7 @@ export async function POST(request) {
         return NextResponse.json({ success: false, message: 'Payment already verified with a different payment id.' }, { status: 409 });
       }
 
-      const existingOrder = session.order ? await Order.findById(session.order).populate('user', 'name email role') : null;
+      const existingOrder = session.order ? await Order.findById(session.order).populate(orderPopulateConfig) : null;
       if (!existingOrder) {
         return NextResponse.json({ success: false, message: 'Payment is verified but order record is missing.' }, { status: 409 });
       }
@@ -84,7 +84,9 @@ export async function POST(request) {
     session.paymentAttempts = Number(session.paymentAttempts || 0) + 1;
     await session.save();
 
-    const verification = verifyPaymentSignature({
+    const verification = session.verificationMode === 'mock'
+      ? { valid: true, mode: 'mock' }
+      : verifyPaymentSignature({
       orderId: razorpay_order_id,
       paymentId: razorpay_payment_id,
       signature: razorpay_signature,

@@ -2,8 +2,15 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Navbar from '@/components/ecommerce/Navbar';
-import { useCart } from '@/hooks/useCart';
+import dynamic from 'next/dynamic';
+
+const FloatingChatbot = dynamic(
+  () => import('@/components/ecommerce/FloatingChatbot'),
+  { 
+    loading: () => <div className="h-16 w-16 rounded-full bg-gray-100 animate-pulse" />,
+    ssr: false 
+  }
+);
 
 const SUGGESTIONS = [
   'Gold necklace for wedding',
@@ -17,7 +24,6 @@ const SUGGESTIONS = [
 ];
 
 export default function RecommendationsPage() {
-  const { cartCount } = useCart();
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -94,9 +100,7 @@ export default function RecommendationsPage() {
 
   return (
     <div className="min-h-screen bg-linear-to-b from-slate-50 via-white to-emerald-50">
-      <Navbar searchTerm="" onSearch={() => {}} cartCount={cartCount} />
-
-      <main className="mx-auto max-w-6xl px-4 pb-16 pt-28 sm:px-6 lg:px-8">
+      <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
           <div>
             <h1 className="text-3xl font-black text-slate-900">AI Shopping Assistant</h1>

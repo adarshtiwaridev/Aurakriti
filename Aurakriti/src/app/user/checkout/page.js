@@ -3,6 +3,7 @@
 import { useCart } from '@/hooks/useCart';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, Lock, CheckCircle2, Package, CreditCard, Truck } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -10,9 +11,10 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useDispatch } from 'react-redux';
 import { clearCart, setCart } from '@/redux/slices/cartSlice';
-import Navbar from '@/components/ecommerce/Navbar';
-import { clearServerCart } from '@/services/cartService';
+import { addToCart as addToCartRequest, clearServerCart, fetchCart } from '@/services/cartService';
 import { createCheckout, finalizeOrder, processPayment } from '@/services/paymentService';
+
+const MONGO_ID_PATTERN = /^[a-f\d]{24}$/i;
 
 export default function CheckoutPage() {
   const { cartItems = [], totalPrice = 0, shippingCost = 0, cartCount } = useCart();
@@ -87,6 +89,22 @@ export default function CheckoutPage() {
     }
     setIsProcessing(true);
     try {
+      const localOnlyItems = cartItems.filter((item) => item.productId === item.id);
+      const unsupportedItems = localOnlyItems.filter((item) => !MONGO_ID_PATTERN.test(String(item.productId || item.id)));
+
+      if (unsupportedItems.length > 0) {
+        throw new Error('Demo items cannot be checked out. Please shop from live catalog items before placing an order.');
+      }
+
+      if (localOnlyItems.length > 0) {
+        await clearServerCart().catch(() => null);
+        for (const item of localOnlyItems) {
+          await addToCartRequest(item.productId || item.id, item.quantity || 1);
+        }
+        const syncedCart = await fetchCart();
+        dispatch(setCart(syncedCart.items ?? []));
+      }
+
       let order;
       if (paymentMethod === 'cod') {
         const checkoutData = await createCheckout(userDetails, 'cod');
@@ -129,8 +147,7 @@ export default function CheckoutPage() {
   if (cartItems.length === 0 && !orderPlaced) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#fffcf8] to-white">
-        <Navbar cartCount={cartCount} searchTerm="" onSearch={() => {}} />
-        <div className="mx-auto max-w-7xl px-4 py-8 pt-28 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
           <Link href="/user/cart" className="inline-flex items-center gap-2 text-sm font-semibold text-[#7b6652] hover:text-[#c9a14a] transition mb-8">
             <ChevronLeft size={16} /> Back to Cart
           </Link>
@@ -174,8 +191,7 @@ export default function CheckoutPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#fffcf8] to-white">
-      <Navbar cartCount={cartCount} searchTerm="" onSearch={() => {}} />
-      <div className="mx-auto max-w-7xl px-4 py-8 pt-28 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <Link href="/user/cart" className="inline-flex items-center gap-2 text-sm font-semibold text-[#7b6652] hover:text-[#c9a14a] transition mb-8">
           <ChevronLeft size={16} /> Back to Cart
         </Link>
@@ -277,7 +293,13 @@ export default function CheckoutPage() {
                   <div key={item.id} className="flex items-center justify-between border-b border-[#f2e5d4] pb-4 last:border-0">
                     <div className="flex items-center gap-4 flex-1">
                       {item.image ? (
-                        <img src={item.image} alt={item.title} className="h-16 w-16 rounded-xl object-cover border border-[#eadfce]" />
+                        <Image
+                          src={item.image}
+                          alt={item.title}
+                          width={64}
+                          height={64}
+                          className="rounded-xl object-cover border border-[#eadfce]"
+                        />
                       ) : (
                         <div className="h-16 w-16 rounded-xl bg-[#f9f0e3] flex items-center justify-center text-xl">💎</div>
                       )}

@@ -1,85 +1,108 @@
-'use client';
+"use client";
 
-import Image from 'next/image';
-import { X } from 'lucide-react';
-import { motion } from 'framer-motion';
+import Image from "next/image";
+import { X } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function CartItem({ item, onIncrement, onDecrement, onRemove }) {
+  const subtotal = item.price * item.quantity;
+
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      transition={{ duration: 0.3 }}
-      className="flex flex-col gap-4 rounded-3xl border border-[#eadfce] bg-white p-6 shadow-sm hover:shadow-lg transition-shadow sm:flex-row sm:items-center sm:justify-between"
+      transition={{ duration: 0.25 }}
+      className="flex flex-col sm:flex-row gap-5 rounded-3xl border border-[#eadfce] bg-white p-5 sm:p-6 shadow-sm hover:shadow-md transition"
     >
-      <div className="flex items-center gap-4 flex-1">
-        <div className="relative h-32 w-32 flex-shrink-0 rounded-2xl overflow-hidden bg-[#f9f0e3]">
+
+      {/* ---------------- IMAGE + DETAILS ---------------- */}
+      <div className="flex gap-4 flex-1">
+        <div className="relative h-28 w-28 sm:h-32 sm:w-32 flex-shrink-0 rounded-2xl overflow-hidden bg-[#f9f0e3]">
           {item.image ? (
             <Image
               src={item.image}
               alt={item.title}
               fill
               sizes="128px"
-              className="object-cover transition-transform duration-300 hover:scale-110"
+              className="object-cover hover:scale-105 transition-transform duration-300"
             />
           ) : (
             <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-[#f2e5d4] to-[#e7dccf]">
-              <span className="text-4xl">✨</span>
+              <span className="text-3xl">✨</span>
             </div>
           )}
         </div>
 
         <div className="flex-1 min-w-0">
-          <h3 className="text-base sm:text-lg font-bold text-[#3d2f24] line-clamp-2 hover:text-[#c9a14a] transition-colors">{item.title}</h3>
-          <p className="mt-3 text-sm sm:text-base font-black text-[#c9a14a]">₹{item.price.toFixed(2)}</p>
-          <p className="mt-1 text-xs sm:text-sm text-[#9b7a48]">Per item</p>
+          <h3 className="text-base sm:text-lg font-bold text-[#3d2f24] line-clamp-2">
+            {item.title}
+          </h3>
+
+          <p className="mt-2 text-sm font-bold text-[#c9a14a]">
+            ₹{item.price.toFixed(2)}
+          </p>
+
+          <p className="text-xs text-[#9b7a48] mt-1">Per item</p>
+
+          {/* Mobile subtotal */}
+          <p className="sm:hidden mt-3 text-sm font-semibold text-[#3d2f24]">
+            Subtotal: ₹{subtotal.toFixed(2)}
+          </p>
         </div>
       </div>
 
+      {/* ---------------- CONTROLS ---------------- */}
       <div className="flex flex-col gap-4 sm:items-end">
-        {/* Quantity Selector */}
-        <motion.div className="flex items-center rounded-full border border-[#f2e5d4] bg-[#f9f0e3] overflow-hidden w-fit">
+
+        {/* Quantity */}
+        <div className="flex items-center rounded-full border border-[#f2e5d4] bg-[#f9f0e3] overflow-hidden w-fit">
+          
           <button
             type="button"
             onClick={() => onDecrement(item.id)}
-            className="h-11 w-11 flex items-center justify-center text-[#5a4a3c] hover:bg-[#fff4de] active:bg-[#ffe5b4] transition font-bold text-lg"
+            disabled={item.quantity <= 1}
+            className="h-10 w-10 flex items-center justify-center text-[#5a4a3c] hover:bg-[#fff4de] disabled:opacity-40 disabled:cursor-not-allowed transition font-bold text-lg"
             aria-label="Decrease quantity"
           >
             −
           </button>
-          <span className="px-6 py-2 text-sm font-black text-[#3d2f24] min-w-[3rem] text-center">{item.quantity}</span>
+
+          <span className="px-5 py-2 text-sm font-bold text-[#3d2f24] min-w-[2.5rem] text-center">
+            {item.quantity}
+          </span>
+
           <button
             type="button"
             onClick={() => onIncrement(item.id)}
-            className="h-11 w-11 flex items-center justify-center text-[#5a4a3c] hover:bg-[#fff4de] active:bg-[#ffe5b4] transition font-bold text-lg"
+            className="h-10 w-10 flex items-center justify-center text-[#5a4a3c] hover:bg-[#fff4de] transition font-bold text-lg"
             aria-label="Increase quantity"
           >
             +
           </button>
-        </motion.div>
+        </div>
 
-        {/* Subtotal */}
-        <div className="text-right">
-          <p className="text-xs text-[#9b7a48] mb-1">Subtotal</p>
+        {/* Subtotal (desktop) */}
+        <div className="hidden sm:block text-right">
+          <p className="text-xs text-[#9b7a48]">Subtotal</p>
+
           <motion.p
-            key={item.quantity}
-            initial={{ scale: 0.9 }}
-            animate={{ scale: 1 }}
-            className="text-lg sm:text-xl font-black text-[#c9a14a]"
+            key={subtotal}
+            initial={{ scale: 0.95, opacity: 0.6 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="text-lg font-black text-[#c9a14a]"
           >
-            ₹{(item.price * item.quantity).toFixed(2)}
+            ₹{subtotal.toFixed(2)}
           </motion.p>
         </div>
 
-        {/* Remove Button */}
+        {/* Remove */}
         <motion.button
           type="button"
           onClick={() => onRemove(item.id)}
-          whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          className="inline-flex items-center justify-center gap-2 rounded-full bg-[#fef3c7] px-4 py-2.5 text-sm font-semibold text-[#d97706] hover:bg-[#fde68a] transition-colors"
+          className="inline-flex items-center justify-center gap-2 rounded-full bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-100 transition"
           aria-label="Remove item"
         >
           <X size={16} />

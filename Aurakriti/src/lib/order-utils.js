@@ -1,6 +1,7 @@
 import Cart from '@/models/Cart';
 import Order from '@/models/Order';
 import Product from '@/models/Product';
+import { mapProductDocument } from '@/lib/product-utils';
 
 export const SHIPPING_THRESHOLD = 1000;
 export const STANDARD_SHIPPING = 50;
@@ -15,7 +16,7 @@ export const mapOrder = (order, currentUser) => {
     })
     .map((item) => ({
       id: String(item._id),
-      productId: String(item.product),
+      productId: String(item.product?._id ?? item.product),
       sellerId: String(item.seller),
       title: item.title,
       price: item.price,
@@ -23,6 +24,25 @@ export const mapOrder = (order, currentUser) => {
       image: item.image,
       category: item.category,
       status: item.status,
+      product: item.product?._id
+        ? mapProductDocument(
+            {
+              ...item.product,
+              title: item.product.title || item.title,
+              images: item.product.images?.length ? item.product.images : item.image ? [item.image] : [],
+              category: item.product.category || item.category,
+            },
+            currentUser
+          )
+        : {
+            id: String(item.product),
+            title: item.title,
+            name: item.title,
+            images: item.image ? [item.image] : [],
+            image: item.image,
+            category: item.category,
+            price: item.price,
+          },
     }));
 
   return {
@@ -56,13 +76,21 @@ export const mapOrder = (order, currentUser) => {
 export async function loadCartForOrder(userId) {
   return Cart.findOne({ user: userId }).populate({
     path: 'items.product',
-    populate: { path: 'seller', select: 'name email role' },
+    populate: [{ path: 'seller', select: 'name email role' }, { path: 'reviews.user', select: 'name' }],
   });
 }
 
+export const orderPopulateConfig = [
+  { path: 'user', select: 'name email role' },
+  {
+    path: 'items.product',
+    populate: [{ path: 'seller', select: 'name email role' }, { path: 'reviews.user', select: 'name' }],
+  },
+];
+
 export async function buildOrderDataFromCart({ userId, shippingAddress = {} }) {
   const cart = await loadCartForOrder(userId);
-
+    console.log("CART DATA:", cart);
   if (!cart || cart.items.length === 0) {
     throw new Error('Your cart is empty.');
   }
@@ -147,7 +175,7 @@ export async function createOrderFromCart({ userId, shippingAddress = {}, method
 
 export async function finalizeOrderPayment({ order, payment = {}, verificationMode = 'test', isCOD = false }) {
   if (order.paymentStatus === 'paid') {
-    return Order.findById(order._id).populate('user', 'name email role');
+    return Order.findById(order._id).populate(orderPopulateConfig);
   }
 
   for (const item of order.items) {
@@ -188,5 +216,5 @@ export async function finalizeOrderPayment({ order, payment = {}, verificationMo
   await order.save();
   await Cart.findOneAndUpdate({ user: order.user }, { $set: { items: [] } });
 
-  return Order.findById(order._id).populate('user', 'name email role');
+  return Order.findById(order._id).populate(orderPopulateConfig);
 }

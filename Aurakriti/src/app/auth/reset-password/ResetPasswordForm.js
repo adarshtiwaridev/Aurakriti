@@ -19,7 +19,7 @@ export default function ResetPasswordForm({ token }) {
   useEffect(() => {
     if (!token) {
       toast.error('Invalid reset link');
-      router.push('/auth/forgot-password');
+      router.push('/auth/login/forgot-password');
     }
   }, [token, router]);
 

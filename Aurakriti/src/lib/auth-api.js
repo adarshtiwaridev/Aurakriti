@@ -141,8 +141,9 @@ export const signupHandler = withErrorHandling('Signup', async (request) => {
     return createErrorResponse('Name, email, and password are required.', {}, 400);
   }
 
-  if (password.length < 6) {
-    return createErrorResponse('Password must be at least 6 characters long.', {}, 400);
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+  if (!passwordRegex.test(password)) {
+    return createErrorResponse('Password must be at least 8 characters long, and include an uppercase letter, a lowercase letter, and a number.', {}, 400);
   }
 
   if (!ALLOWED_SIGNUP_ROLES.includes(role)) {
@@ -177,6 +178,31 @@ export const signupHandler = withErrorHandling('Signup', async (request) => {
   let otpSent = false;
   let otpSentAt = null;
   let otpRecord = null;
+
+  // Development bypass: Auto-verify user if email not configured
+  const isEmailConfigured = !!(process.env.EMAIL_USER && process.env.EMAIL_PASS);
+
+  if (!isEmailConfigured) {
+    // Auto-verify user for development without email
+    user.isVerified = true;
+    await user.save();
+    
+    // Generate token for immediate login
+    const token = generateToken({ userId: user._id, email: user.email, role: user.role });
+    const response = createSuccessResponse(
+      'Account created and verified successfully (development mode).',
+      {
+        user: sanitizeUser(user),
+        token,
+        isVerified: true,
+        redirectTo: getDashboardRoute(user.role)
+      },
+      201
+    );
+
+    setAuthCookie(response, token);
+    return response;
+  }
 
   try {
     otpRecord = await createAndSendOtp(user, VERIFICATION_PURPOSE);
@@ -436,8 +462,9 @@ export const resetPasswordHandler = withErrorHandling('Reset password', async (r
     return createErrorResponse('Email, OTP, and password are required.', {}, 400);
   }
 
-  if (password.length < 6) {
-    return createErrorResponse('Password must be at least 6 characters long.', {}, 400);
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+  if (!passwordRegex.test(password)) {
+    return createErrorResponse('Password must be at least 8 characters long, and include an uppercase letter, a lowercase letter, and a number.', {}, 400);
   }
 
   const user = await User.findOne({ email });
