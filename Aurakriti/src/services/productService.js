@@ -24,8 +24,7 @@ export async function getProducts(params = {}) {
   const query = buildQuery(params);
   const response = await fetch(`/api/products${query ? `?${query}` : ''}`, {
     credentials: 'include',
-    cache: 'force-cache',
-    next: { revalidate: 300 },
+    cache: 'no-store',
   });
 
   return parseResponse(response);

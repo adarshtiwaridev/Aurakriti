@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Product from '@/models/Product';
 import { PRODUCT_CATEGORIES } from '@/lib/catalog';
-import productsData from '@/app/data/products.json';
 
 const JEWELLERY_CATEGORY_SET = new Set(PRODUCT_CATEGORIES.map((value) => String(value).toLowerCase()));
 
@@ -33,19 +32,6 @@ const mapProduct = (product) => ({
   images: product.images ?? [],
   image: product.images?.[0] ?? '',
   stock: product.stock,
-});
-
-const mapFallbackProduct = (product) => ({
-  id: String(product.id),
-  title: product.name,
-  description: product.description,
-  price: product.price,
-  category: product.category,
-  rating: product.rating ?? 0,
-  tags: product.tags ?? [],
-  images: product.images ?? [],
-  image: product.images?.[0] ?? '',
-  stock: product.stock ?? 0,
 });
 
 function parseBudget(query) {
@@ -177,14 +163,6 @@ const buildMongoQuery = (context) => {
   return mongoQuery;
 };
 
-const getFallbackRecommendations = (context) => {
-  const fallbackProducts = Array.isArray(productsData?.products) ? productsData.products : [];
-  const normalizedFallback = fallbackProducts
-    .map(mapFallbackProduct)
-    .filter((product) => product.stock > 0 && JEWELLERY_CATEGORY_SET.has(String(product.category).toLowerCase()));
-  return rankProducts(normalizedFallback, context);
-};
-
 export async function POST(request) {
   const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const token = request.cookies?.get('ecocommerce_auth')?.value;
@@ -228,48 +206,35 @@ export async function POST(request) {
       mongoQuery,
     });
 
-    let ranked = [];
-    let dataSource = 'mongodb';
+    const dbConnection = await connectDB();
+    console.log(`${CHATBOT_DEBUG_PREFIX} DB connected`, {
+      requestId,
+      dbName: dbConnection?.connection?.name,
+      host: dbConnection?.connection?.host,
+    });
 
-    try {
-      const dbConnection = await connectDB();
-      console.log(`${CHATBOT_DEBUG_PREFIX} DB connected`, {
-        requestId,
-        dbName: dbConnection?.connection?.name,
-        host: dbConnection?.connection?.host,
-      });
+    let candidates = await Product.find(mongoQuery)
+      .sort({ rating: -1, createdAt: -1 })
+      .limit(60)
+      .lean();
 
-      let candidates = await Product.find(mongoQuery)
+    if (!candidates.length) {
+      candidates = await Product.find({
+        isActive: true,
+        stock: { $gt: 0 },
+        category: { $in: Array.from(JEWELLERY_CATEGORY_SET) },
+      })
         .sort({ rating: -1, createdAt: -1 })
-        .limit(60)
+        .limit(20)
         .lean();
-
-      if (!candidates.length) {
-        candidates = await Product.find({
-          isActive: true,
-          stock: { $gt: 0 },
-          category: { $in: Array.from(JEWELLERY_CATEGORY_SET) },
-        })
-          .sort({ rating: -1, createdAt: -1 })
-          .limit(20)
-          .lean();
-      }
-
-      const normalizedCandidates = candidates.map(mapProduct);
-      ranked = rankProducts(normalizedCandidates, context);
-    } catch (dbError) {
-      dataSource = 'fallback-json';
-      console.error(`${CHATBOT_DEBUG_PREFIX} DB flow failed; using fallback data`, {
-        requestId,
-        name: dbError?.name,
-        message: dbError?.message,
-      });
-      ranked = getFallbackRecommendations(context);
     }
+
+    const normalizedCandidates = candidates.map(mapProduct);
+    const ranked = rankProducts(normalizedCandidates, context);
 
     console.log(`${CHATBOT_DEBUG_PREFIX} Response ready`, {
       requestId,
-      dataSource,
+      dataSource: 'mongodb',
       recommendationCount: ranked.length,
     });
 
@@ -278,7 +243,7 @@ export async function POST(request) {
       data: {
         query,
         parsed: context,
-        dataSource,
+        dataSource: 'mongodb',
         recommendations: ranked,
         fallbackMessage: ranked.length ? null : 'No exact match found. Try a different jewellery query.',
       },
