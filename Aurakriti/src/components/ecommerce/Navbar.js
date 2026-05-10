@@ -126,13 +126,21 @@ export default function Navbar() {
             </form>
           </div>
 
-          {/* ---------------- ACTIONS ---------------- */}
-          <div className="flex items-center gap-2 ml-auto">
-
-            {/* Mobile search */}
-            <button
-              className="lg:hidden icon-btn"
-              onClick={() => setSearchOpen((v) => !v)}
+        {/* RIGHT: Actions */}
+        <div className="flex items-center gap-2 sm:gap-4">
+          <Link
+  href="/wishlist"
+  className="group relative flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-[#5d4b36] shadow-sm transition-colors duration-300 hover:bg-[#fff6e6]"
+  title="Wishlist"
+>
+  ❤️
+</Link>
+          {/* Cart Button */}
+          {canUseCart && (
+            <Link
+              href="/user/cart"
+              className="group relative flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-[#5d4b36] shadow-sm transition-colors duration-300 hover:bg-[#fff6e6]"
+              title="Shopping Cart"
             >
               <SearchIcon />
             </button>

@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { getProduct, getProducts } from '@/services/productService';
 import { addToCart as addToCartRequest } from '@/services/cartService';
 import { useDispatch } from 'react-redux';
-import { addToCart, setCart } from '@/redux/slices/cartSlice';
+import { setCart } from '@/redux/slices/cartSlice';
 import { Camera, Star, BadgeCheck, MessageSquare, Pencil, ShoppingBag, Truck, Trash2 } from 'lucide-react';
 import { createReview, deleteReview, updateReview } from '@/services/productService';
 
@@ -153,7 +153,7 @@ export default function ProductDetail() {
         const data = await getProduct(productId);
         setProduct(data);
         setReviews(data.reviews || []);
-        setMyReview(data.reviews?.find(r => r.userId === user?.id));
+        setMyReview(data.reviews?.find((r) => r.userId === (user?.id || user?._id)) || null);
       } catch (err) {
         setError(err.message || 'Product not found');
       } finally {
@@ -174,15 +174,8 @@ export default function ProductDetail() {
 
     setAddingToCart(true);
     try {
-      await addToCartRequest(productId, quantity);
-      // Update Redux state
-      dispatch(addToCart({
-        productId,
-        quantity,
-        price: product.price,
-        title: product.title,
-        image: product.images?.[0] || product.image
-      }));
+      const cart = await addToCartRequest(productId, quantity);
+      dispatch(setCart(cart.items ?? []));
     } catch (err) {
       console.error('Add to cart error:', err);
     } finally {
@@ -196,13 +189,20 @@ export default function ProductDetail() {
 
     try {
       if (editingReviewId) {
-        const updated = await updateReview(editingReviewId, reviewForm);
-        setReviews(reviews.map(r => r.id === editingReviewId ? updated : r));
+        const result = await updateReview(productId, editingReviewId, reviewForm);
+        const updatedReview = result.review || null;
+        if (updatedReview) {
+          setReviews((prev) => prev.map((r) => (r.id === editingReviewId ? updatedReview : r)));
+          setMyReview(updatedReview);
+        }
         setEditingReviewId(null);
       } else {
-        const newReview = await createReview(productId, reviewForm);
-        setReviews([...reviews, newReview]);
-        setMyReview(newReview);
+        const result = await createReview(productId, reviewForm);
+        const newReview = result.review || null;
+        if (newReview) {
+          setReviews((prev) => [...prev, newReview]);
+          setMyReview(newReview);
+        }
       }
       setReviewForm(EMPTY_REVIEW);
     } catch (err) {
@@ -214,8 +214,8 @@ export default function ProductDetail() {
 
   const handleReviewDelete = async (reviewId) => {
     try {
-      await deleteReview(reviewId);
-      setReviews(reviews.filter(r => r.id !== reviewId));
+      await deleteReview(productId, reviewId);
+      setReviews((prev) => prev.filter((r) => r.id !== reviewId));
       if (reviewId === myReview?.id) {
         setMyReview(null);
       }
@@ -228,8 +228,10 @@ export default function ProductDetail() {
   if (error) return <ErrorCard message={error} productId={productId} />;
   if (!product) return null;
 
-  const images = product.images || [product.image];
-  const inStock = product.stock > 0;
+  const images = Array.isArray(product.images) && product.images.length
+    ? product.images
+    : (product.image ? [product.image] : []);
+  const inStock = Number(product.stock || 0) > 0;
   const discount = product.discountPrice && product.price > product.discountPrice;
 
   return (
@@ -237,14 +239,20 @@ export default function ProductDetail() {
       {/* Images */}
       <div>
         <div className="relative h-[28rem] w-full overflow-hidden rounded-3xl bg-slate-100">
-          <Image
-            src={images[selectedImage]}
-            alt={product.title}
-            fill
-            className="object-cover"
-            sizes="(max-width: 1024px) 100vw, 50vw"
-            priority
-          />
+          {images[selectedImage] ? (
+            <Image
+              src={images[selectedImage]}
+              alt={product.title}
+              fill
+              className="object-cover"
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              priority
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center text-sm text-slate-500">
+              Product image unavailable
+            </div>
+          )}
           {!inStock && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/50">
               <span className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white">Out of Stock</span>
@@ -434,7 +442,7 @@ export default function ProductDetail() {
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-slate-900">{review.userName}</span>
+                      <span className="font-medium text-slate-900">{review.name || 'Anonymous'}</span>
                       <RatingStars rating={review.rating} />
                     </div>
                     <h4 className="mt-1 font-medium text-slate-900">{review.title}</h4>
@@ -552,6 +560,7 @@ export async function generateMetadata({ params }) {
 export default function ProductDetailsPage() {
   return <ProductClient />;
                   {user && review.userId === user.id && (
+                  {user && review.userId === (user.id || user._id) && (
                     <div className="flex gap-2">
                       <button
                         onClick={() => {

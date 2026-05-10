@@ -120,7 +120,7 @@ export default function ProductDetailsPage() {
     try {
       setAdding(true);
       setError('');
-      if (!isAuthenticated || product?.isDemo) {
+      if (!isAuthenticated) {
         dispatch(addToCart({
           id: product.id,
           productId: product.id,

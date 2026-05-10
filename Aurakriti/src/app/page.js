@@ -111,104 +111,6 @@ const promoBanners = [
   },
 ];
 
-const fallbackProducts = [
-  {
-    id: "p1",
-    name: "Celeste Pearl Necklace",
-    category: "Necklaces",
-    price: 2499,
-    originalPrice: 3199,
-    rating: 4.9,
-    reviews: 124,
-    badge: "Best Seller",
-    image:
-      "https://images.unsplash.com/photo-1611085583191-a3b181a88401?auto=format&fit=crop&w=900&q=80",
-  },
-  {
-    id: "p2",
-    name: "Aurelia Hoop Earrings",
-    category: "Earrings",
-    price: 1599,
-    originalPrice: 2199,
-    rating: 4.8,
-    reviews: 88,
-    badge: "Trending",
-    image:
-      "https://images.unsplash.com/photo-1630019852942-f89202989a59?auto=format&fit=crop&w=900&q=80",
-  },
-  {
-    id: "p3",
-    name: "Mira Statement Ring",
-    category: "Rings",
-    price: 1899,
-    originalPrice: 2499,
-    rating: 4.7,
-    reviews: 63,
-    badge: "Limited",
-    image:
-      "https://images.unsplash.com/photo-1603974372039-adc49044b6bd?auto=format&fit=crop&w=900&q=80",
-  },
-  {
-    id: "p4",
-    name: "Sienna Charm Bracelet",
-    category: "Bracelets",
-    price: 1399,
-    originalPrice: 1899,
-    rating: 4.6,
-    reviews: 51,
-    badge: "New",
-    image:
-      "https://images.unsplash.com/photo-1573408301185-9146fe634ad0?auto=format&fit=crop&w=900&q=80",
-  },
-  {
-    id: "p5",
-    name: "Noor Layered Pendant",
-    category: "Necklaces",
-    price: 2199,
-    originalPrice: 2799,
-    rating: 4.8,
-    reviews: 95,
-    badge: "Editor's Pick",
-    image:
-      "https://images.unsplash.com/photo-1617038220319-276d3cfab638?auto=format&fit=crop&w=900&q=80",
-  },
-  {
-    id: "p6",
-    name: "Elara Stone Studs",
-    category: "Earrings",
-    price: 999,
-    originalPrice: 1499,
-    rating: 4.5,
-    reviews: 43,
-    badge: "Giftable",
-    image:
-      "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=900&q=80",
-  },
-  {
-    id: "p7",
-    name: "Ivy Gold Cuff",
-    category: "Bracelets",
-    price: 1799,
-    originalPrice: 2299,
-    rating: 4.7,
-    reviews: 58,
-    badge: "Popular",
-    image:
-      "https://images.unsplash.com/photo-1619119069152-a2b331eb392a?auto=format&fit=crop&w=900&q=80",
-  },
-  {
-    id: "p8",
-    name: "Solstice Halo Ring",
-    category: "Rings",
-    price: 2699,
-    originalPrice: 3499,
-    rating: 4.9,
-    reviews: 132,
-    badge: "Premium",
-    image:
-      "https://images.unsplash.com/photo-1605100804763-247f67b3557e?auto=format&fit=crop&w=900&q=80",
-  },
-];
 
 const uspItems = [
   {
@@ -236,6 +138,7 @@ export default function HomePage() {
   const [activeSlide, setActiveSlide] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [products, setProducts] = useState([]);
   const deferredSearchTerm = useDeferredValue(searchTerm);
   const { initialized, isAuthenticated, user } = useAuth();
@@ -252,16 +155,18 @@ export default function HomePage() {
     let isMounted = true;
 
     async function loadProducts() {
+      setLoadError("");
+
       try {
         const response = await fetch("/api/products?featured=true", {
           cache: "no-store",
         });
 
-        if (!response.ok) {
-          throw new Error("Unable to fetch featured products");
+        const data = await response.json();
+        if (!response.ok || !data?.success) {
+          throw new Error(data?.message || "Unable to fetch featured products");
         }
 
-        const data = await response.json();
         const items = Array.isArray(data)
           ? data
           : Array.isArray(data?.data?.products)
@@ -271,17 +176,16 @@ export default function HomePage() {
               : [];
 
         if (isMounted) {
-          setProducts(items.length > 0 ? normalizeProducts(items) : fallbackProducts.map((product) => ({ ...product, isDemo: true })));
+          setProducts(normalizeProducts(items));
         }
-      } catch {
+      } catch (error) {
         if (isMounted) {
-          setProducts(fallbackProducts.map((product) => ({ ...product, isDemo: true })));
+          setProducts([]);
+          setLoadError(error?.message || "Unable to load featured products.");
         }
       } finally {
         if (isMounted) {
-          window.setTimeout(() => {
-            setIsLoading(false);
-          }, 500);
+          setIsLoading(false);
         }
       }
     }
@@ -320,7 +224,7 @@ export default function HomePage() {
     }
 
     try {
-      if (!isAuthenticated || product.isDemo) {
+      if (!isAuthenticated) {
         dispatch(addToCart({
           id: product.id,
           productId: product.id,
@@ -586,7 +490,14 @@ export default function HomePage() {
                 ))}
           </div>
 
-          {!isLoading && filteredProducts.length === 0 ? (
+          {!isLoading && loadError ? (
+            <div className="mt-8 rounded-[1.75rem] border border-red-200 bg-red-50 p-6 text-center shadow-sm">
+              <p className="text-lg font-semibold text-red-700">Could not load featured products</p>
+              <p className="mt-2 text-sm text-red-600">{loadError}</p>
+            </div>
+          ) : null}
+
+          {!isLoading && !loadError && filteredProducts.length === 0 ? (
             <div className="mt-8 rounded-[1.75rem] border border-dashed border-stone-300 bg-white p-10 text-center shadow-sm">
               <p className="text-lg font-semibold text-stone-900">
                 No products matched your search

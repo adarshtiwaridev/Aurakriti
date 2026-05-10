@@ -112,6 +112,23 @@ export default function ProductCard({ product, compact = false, onAddToCart }) {
           >
             <HeartIcon filled={wishlisted} />
           </button>
+
+          {/* ❤️ Wishlist (FIXED) */}
+          <button
+            type="button"
+            onClick={toggleWishlist}
+            className="absolute right-4 bottom-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-md backdrop-blur-sm transition-all duration-300 hover:bg-white hover:scale-110 active:scale-90"
+          >
+            <Heart
+              size={20}
+              className={`transition-colors duration-300 ${
+                isWishlisted
+                  ? 'fill-red-500 text-red-500'
+                  : 'text-[#6f5c4a] hover:text-red-400'
+              }`}
+            />
+          </button>
+
         </div>
 
         {/* Info */}
