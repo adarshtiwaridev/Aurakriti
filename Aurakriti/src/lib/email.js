@@ -1,5 +1,8 @@
 import nodemailer from 'nodemailer';
 import { getAppUrl } from '@/lib/app-url';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('email');
 
 const smtpHost = process.env.SMTP_HOST?.trim() || 'smtp.gmail.com';
 const smtpPort = Number(process.env.SMTP_PORT?.trim() || 587);
@@ -13,7 +16,7 @@ const EMAIL_RETRY_DELAY_MS = Number(process.env.EMAIL_RETRY_DELAY_MS ?? 1000);
 const isEmailConfigured = !!(emailUser && emailPass && fromEmail);
 
 if (!isEmailConfigured) {
-  console.warn('Email disabled: SMTP settings (EMAIL_USER, EMAIL_PASS, FROM_EMAIL) are not configured.');
+  logger.warn('Email disabled: SMTP settings (EMAIL_USER, EMAIL_PASS, FROM_EMAIL) are not configured.');
 }
 
 let transporter = null;
@@ -30,10 +33,10 @@ if (isEmailConfigured) {
 
   transporter.verify().then(
     () => {
-      console.log('SMTP transporter verified successfully.');
+      logger.info('SMTP transporter verified successfully.');
     },
     (error) => {
-      console.warn('SMTP transporter verification failed:', error.message);
+      logger.warn('SMTP transporter verification failed:', error.message);
     }
   );
 }
@@ -46,7 +49,7 @@ const getFromAddress = () => {
 
 export const sendEmail = async (to, subject, html, options = {}) => {
   if (!transporter) {
-    console.warn('Email skipped (SMTP not configured):', subject);
+    logger.warn('Email skipped (SMTP not configured):', subject);
     return null;
   }
   const mailOptions = {
@@ -60,10 +63,10 @@ export const sendEmail = async (to, subject, html, options = {}) => {
   for (let attempt = 1; attempt <= EMAIL_MAX_RETRIES; attempt += 1) {
     try {
       const result = await transporter.sendMail(mailOptions);
-      console.log(`Email sent successfully on attempt ${attempt}:`, result.messageId);
+      logger.info(`Email sent successfully on attempt ${attempt}:`, result.messageId);
       return result;
     } catch (error) {
-      console.error(`Email sending failed (attempt ${attempt}/${EMAIL_MAX_RETRIES}):`, error.message);
+      logger.error(`Email sending failed (attempt ${attempt}/${EMAIL_MAX_RETRIES}):`, error.message);
       if (attempt >= EMAIL_MAX_RETRIES) {
         throw error;
       }
@@ -200,7 +203,7 @@ const PRODUCT_LAUNCH_BATCH_SIZE = 25;
 
 export const sendNewProductLaunchEmail = async (product, users = []) => {
   if (!users.length) {
-    console.warn('[Email] sendNewProductLaunchEmail: no users provided, skipping.');
+    logger.warn('sendNewProductLaunchEmail: no users provided, skipping.');
     return;
   }
 
@@ -262,14 +265,14 @@ export const sendNewProductLaunchEmail = async (product, users = []) => {
         sent += 1;
       }).catch((error) => {
         failed += 1;
-        console.error(`[Email] Failed to send launch email to ${user.email}:`, error.message);
+        logger.error(`Failed to send launch email to ${user.email}:`, error.message);
       })
     );
 
     await Promise.allSettled(batchPromises);
   }
 
-  console.log(`[Email] Product launch emails: ${sent} sent, ${failed} failed.`);
+  logger.info(`Product launch emails: ${sent} sent, ${failed} failed.`);
 };
 
 export const sendOrderStatusEmail = async (order, user, newStatus) => {
