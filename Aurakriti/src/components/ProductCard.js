@@ -2,22 +2,23 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import {
+  Heart,
+  Eye,
+  ShoppingBag,
+  Star,
+  Check,
+} from "lucide-react";
 
-/**
- * ProductCard — generic, works for any product category.
- *
- * Props:
- *  product: {
- *    _id, name, price, originalPrice?, images[], category,
- *    rating, reviewCount, badge? ("sale"|"hot"|"new"), stock
- *  }
- *  onAddToCart?: (product) => void | Promise<void>
- *  compact?: boolean  — smaller card for sidebar / related
- */
-export default function ProductCard({ product, compact = false, onAddToCart }) {
+export default function ProductCard({
+  product,
+  compact = false,
+  onAddToCart,
+}) {
   const [added, setAdded] = useState(false);
   const [wishlisted, setWishlisted] = useState(false);
+  const [hovered, setHovered] = useState(false);
 
   const {
     id,
@@ -26,12 +27,12 @@ export default function ProductCard({ product, compact = false, onAddToCart }) {
     title,
     price,
     originalPrice,
-    images,
+    images = [],
     image,
     category,
     rating = 0,
-    reviews,
     reviewCount = 0,
+    reviews,
     badge,
     stock = 99,
   } = product;
@@ -41,141 +42,319 @@ export default function ProductCard({ product, compact = false, onAddToCart }) {
 
   const discount =
     originalPrice && originalPrice > price
-      ? Math.round(((originalPrice - price) / originalPrice) * 100)
+      ? Math.round(
+          ((originalPrice - price) / originalPrice) * 100
+        )
       : null;
 
-  const imgSrc = images?.[0] ?? image ?? null;
   const outOfStock = stock === 0;
+
+  const productImages = useMemo(() => {
+    if (images?.length > 0) return images;
+    if (image) return [image];
+    return [];
+  }, [images, image]);
+
+  const activeImage =
+    hovered && productImages[1]
+      ? productImages[1]
+      : productImages[0];
 
   const handleAddToCart = async (e) => {
     e.preventDefault();
+
     if (outOfStock || added || !onAddToCart) return;
+
     await onAddToCart({
       ...product,
       id: productId,
       title: productTitle,
-      name: productTitle,
-      image: imgSrc || "",
+      image: activeImage || "",
     });
-    setAdded(true);
-    window.setTimeout(() => setAdded(false), 1600);
-  };
 
-  const handleWishlist = (e) => {
-    e.preventDefault();
-    setWishlisted((v) => !v);
+    setAdded(true);
+
+    setTimeout(() => {
+      setAdded(false);
+    }, 1800);
   };
 
   return (
     <Link
       href={`/products/${productId}`}
-      className="block group"
+      className="block group h-full"
       style={{ textDecoration: "none" }}
     >
       <article
-        className="card overflow-hidden h-full flex flex-col"
-        style={{ borderRadius: "var(--radius-lg)" }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        className="
+          relative overflow-hidden h-full flex flex-col
+          rounded-3xl border border-gray-200/70
+          bg-white/80 backdrop-blur-xl
+          transition-all duration-500
+          hover:-translate-y-2
+          hover:shadow-[0_20px_60px_rgba(0,0,0,0.12)]
+        "
       >
-        {/* Image area */}
+        {/* ================= IMAGE SECTION ================= */}
+
         <div
-          className="relative overflow-hidden bg-gray-50"
-          style={{ aspectRatio: compact ? "4/3" : "1/1" }}
+          className="
+            relative overflow-hidden bg-gradient-to-br
+            from-gray-50 to-gray-100
+          "
+          style={{
+            aspectRatio: compact ? "4/4.2" : "1/1",
+          }}
         >
-          {imgSrc ? (
+          {/* Product Image */}
+          {activeImage ? (
             <Image
-              src={imgSrc}
+              src={activeImage}
               alt={productTitle}
               fill
-              sizes="(max-width: 768px) 50vw, 25vw"
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              sizes="(max-width:768px) 50vw, 25vw"
+              className="
+                object-cover
+                transition-all duration-700
+                group-hover:scale-110
+              "
             />
           ) : (
             <PlaceholderImage category={category} />
           )}
 
-          {/* Badge */}
-          {badge && !outOfStock && (
-            <span className={`badge badge-${badge} absolute top-2.5 left-2.5`}>
-              {badge === "sale" && `${discount}% off`}
-              {badge === "hot"  && "🔥 Hot"}
-              {badge === "new"  && "New"}
-            </span>
-          )}
+          {/* Gradient Overlay */}
+          <div
+            className="
+              absolute inset-0
+              bg-gradient-to-t
+              from-black/10
+              via-transparent
+              to-transparent
+              opacity-0 group-hover:opacity-100
+              transition duration-500
+            "
+          />
 
-          {outOfStock && (
-            <div className="absolute inset-0 bg-white/60 flex items-center justify-center">
-              <span className="badge badge-danger text-sm px-3 py-1">Out of stock</span>
+          {/* Badge */}
+          {!outOfStock && badge && (
+            <div className="absolute top-3 left-3 z-20">
+              <span
+                className={`
+                  px-3 py-1 rounded-full text-[11px]
+                  font-semibold tracking-wide shadow-lg
+                  backdrop-blur-md border border-white/30
+                  ${
+                    badge === "sale"
+                      ? "bg-rose-500 text-white"
+                      : badge === "hot"
+                      ? "bg-orange-500 text-white"
+                      : "bg-emerald-500 text-white"
+                  }
+                `}
+              >
+                {badge === "sale" && `${discount}% OFF`}
+                {badge === "hot" && "🔥 Trending"}
+                {badge === "new" && "✨ New"}
+              </span>
             </div>
           )}
 
-          {/* Wishlist button */}
+          {/* Wishlist */}
           <button
-            onClick={handleWishlist}
-            aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
+            onClick={(e) => {
+              e.preventDefault();
+              setWishlisted(!wishlisted);
+            }}
             className="
-              absolute top-2.5 right-2.5
-              w-8 h-8 rounded-full bg-white shadow-sm
+              absolute top-3 right-3 z-20
+              w-10 h-10 rounded-full
+              backdrop-blur-xl
+              bg-white/80
+              border border-white/40
               flex items-center justify-center
-              opacity-0 group-hover:opacity-100 transition-opacity
-              border border-gray-100
+              shadow-lg
+              transition-all duration-300
+              hover:scale-110
             "
           >
-            <HeartIcon filled={wishlisted} />
+            <Heart
+              size={18}
+              className={`transition ${
+                wishlisted
+                  ? "fill-red-500 text-red-500"
+                  : "text-gray-600"
+              }`}
+            />
           </button>
+
+          {/* Quick Actions */}
+          <div
+            className="
+              absolute bottom-4 left-1/2 -translate-x-1/2
+              flex items-center gap-2
+              opacity-0 translate-y-6
+              group-hover:opacity-100
+              group-hover:translate-y-0
+              transition-all duration-500
+            "
+          >
+            <button
+              className="
+                w-11 h-11 rounded-full
+                bg-white text-gray-800
+                shadow-xl flex items-center justify-center
+                hover:bg-black hover:text-white
+                transition
+              "
+            >
+              <Eye size={18} />
+            </button>
+
+            <button
+              onClick={handleAddToCart}
+              disabled={outOfStock}
+              className="
+                px-5 h-11 rounded-full
+                bg-black text-white
+                shadow-xl text-sm font-semibold
+                flex items-center gap-2
+                hover:scale-105
+                transition-all duration-300
+                disabled:opacity-50
+              "
+            >
+              {added ? (
+                <>
+                  <Check size={16} />
+                  Added
+                </>
+              ) : (
+                <>
+                  <ShoppingBag size={16} />
+                  Add
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Out of Stock */}
+          {outOfStock && (
+            <div
+              className="
+                absolute inset-0
+                bg-white/70 backdrop-blur-sm
+                flex items-center justify-center
+              "
+            >
+              <span
+                className="
+                  px-5 py-2 rounded-full
+                  bg-red-500 text-white
+                  font-semibold text-sm
+                  shadow-lg
+                "
+              >
+                Out of Stock
+              </span>
+            </div>
+          )}
         </div>
 
-        {/* Info */}
-        <div className="flex flex-col flex-1 p-3 gap-1.5">
+        {/* ================= CONTENT ================= */}
+
+        <div className="flex flex-col flex-1 p-4">
           {/* Category */}
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+          <p
+            className="
+              text-[11px] uppercase tracking-[0.2em]
+              text-gray-400 font-semibold mb-2
+            "
+          >
             {category}
           </p>
 
-          {/* Name */}
+          {/* Title */}
           <h3
-            className="text-sm font-semibold text-gray-900 leading-tight line-clamp-2 flex-1"
-            title={name}
+            className="
+              text-[15px] md:text-base
+              font-semibold text-gray-900
+              leading-snug line-clamp-2
+              min-h-[44px]
+            "
           >
             {productTitle}
           </h3>
 
           {/* Rating */}
           {(reviewCount || reviews) > 0 && (
-            <div className="flex items-center gap-1">
-              <StarRating rating={rating} />
-              <span className="text-[11px] text-gray-400">({reviewCount || reviews})</span>
+            <div className="flex items-center gap-2 mt-2">
+              <div className="flex items-center gap-1">
+                <Star
+                  size={15}
+                  className="fill-yellow-400 text-yellow-400"
+                />
+                <span className="text-sm font-semibold">
+                  {rating.toFixed(1)}
+                </span>
+              </div>
+
+              <span className="text-sm text-gray-400">
+                ({reviewCount || reviews} reviews)
+              </span>
             </div>
           )}
 
-          {/* Price + Add to cart */}
-          <div className="flex items-center justify-between mt-auto pt-1">
-            <div>
-              <span className="text-base font-bold text-gray-900">
+          {/* Stock Indicator */}
+          {!outOfStock && stock < 10 && (
+            <div className="mt-2">
+              <span
+                className="
+                  text-xs font-medium
+                  text-orange-600
+                "
+              >
+                Only {stock} left in stock
+              </span>
+            </div>
+          )}
+
+          {/* Price */}
+          <div className="mt-auto pt-4">
+            <div className="flex items-end gap-2 flex-wrap">
+              <span className="text-2xl font-bold text-gray-900">
                 ₹{price.toLocaleString("en-IN")}
               </span>
-              {originalPrice && originalPrice > price && (
-                <span className="text-xs text-gray-400 line-through ml-1.5">
-                  ₹{originalPrice.toLocaleString("en-IN")}
-                </span>
-              )}
-            </div>
 
-            <button
-              onClick={handleAddToCart}
-              disabled={outOfStock}
-              aria-label="Add to cart"
-              className="
-                w-8 h-8 rounded-lg flex items-center justify-center
-                text-sm font-bold transition-all duration-200
-                disabled:opacity-40 disabled:cursor-not-allowed
-              "
-              style={{
-                background: added ? "var(--success-bg)" : "var(--brand-500)",
-                color: added ? "var(--success-text)" : "#fff",
-              }}
-            >
-              {added ? "✓" : "+"}
-            </button>
+              {originalPrice &&
+                originalPrice > price && (
+                  <>
+                    <span
+                      className="
+                        text-sm line-through
+                        text-gray-400
+                      "
+                    >
+                      ₹
+                      {originalPrice.toLocaleString(
+                        "en-IN"
+                      )}
+                    </span>
+
+                    <span
+                      className="
+                        px-2 py-1 rounded-full
+                        bg-emerald-100 text-emerald-700
+                        text-xs font-semibold
+                      "
+                    >
+                      Save {discount}%
+                    </span>
+                  </>
+                )}
+            </div>
           </div>
         </div>
       </article>
@@ -183,55 +362,30 @@ export default function ProductCard({ product, compact = false, onAddToCart }) {
   );
 }
 
-/* ── Sub-components ───────────────────────────────────────── */
-
-function StarRating({ rating }) {
-  return (
-    <div className="flex" aria-label={`${rating} out of 5 stars`}>
-      {[1, 2, 3, 4, 5].map((star) => (
-        <svg
-          key={star}
-          width="11" height="11"
-          viewBox="0 0 20 20"
-          fill={star <= Math.round(rating) ? "#F59E0B" : "#E5E7EB"}
-        >
-          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-        </svg>
-      ))}
-    </div>
-  );
-}
-
-function HeartIcon({ filled }) {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill={filled ? "#EF4444" : "none"} stroke={filled ? "#EF4444" : "#94A3B8"} strokeWidth="2">
-      <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
-    </svg>
-  );
-}
-
-// Generic placeholder when no image is provided
 const CATEGORY_EMOJI = {
   electronics: "📱",
-  footwear:    "👟",
-  fashion:     "👗",
-  home:        "🏠",
-  sports:      "🏅",
-  beauty:      "💄",
-  books:       "📚",
-  toys:        "🧸",
+  footwear: "👟",
+  fashion: "👗",
+  home: "🏠",
+  sports: "🏅",
+  beauty: "💄",
+  books: "📚",
+  toys: "🧸",
 };
 
 function PlaceholderImage({ category = "" }) {
   const emoji =
-    CATEGORY_EMOJI[category?.toLowerCase()] ??
-    CATEGORY_EMOJI[Object.keys(CATEGORY_EMOJI).find((k) => category?.toLowerCase().includes(k))] ??
-    "🛍️";
+    CATEGORY_EMOJI[
+      category?.toLowerCase()
+    ] || "🛍️";
 
   return (
     <div
-      className="w-full h-full flex items-center justify-center"
-      style={{ background: "var(--brand-50)", fontSize: "3.5rem" }}
+      className="
+        w-full h-full
+        flex items-center justify-center
+        text-6xl
+      "
     >
       {emoji}
     </div>
