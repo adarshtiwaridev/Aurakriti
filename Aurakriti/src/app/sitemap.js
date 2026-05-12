@@ -1,4 +1,4 @@
-import { connectDB } from "@/lib/db";
+import connectDB from "@/lib/db";
 import Product from "@/models/Product";
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://aurakriti.vercel.app";

@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Product from '@/models/Product';
 import { PRODUCT_CATEGORIES } from '@/lib/catalog';
-import productsData from '@/app/data/products.json';
 
 const JEWELLERY_CATEGORY_SET = new Set(PRODUCT_CATEGORIES.map((value) => String(value).toLowerCase()));
 
@@ -33,19 +32,6 @@ const mapProduct = (product) => ({
   images: product.images ?? [],
   image: product.images?.[0] ?? '',
   stock: product.stock,
-});
-
-const mapFallbackProduct = (product) => ({
-  id: String(product.id),
-  title: product.name,
-  description: product.description,
-  price: product.price,
-  category: product.category,
-  rating: product.rating ?? 0,
-  tags: product.tags ?? [],
-  images: product.images ?? [],
-  image: product.images?.[0] ?? '',
-  stock: product.stock ?? 0,
 });
 
 function parseBudget(query) {
@@ -177,14 +163,6 @@ const buildMongoQuery = (context) => {
   return mongoQuery;
 };
 
-const getFallbackRecommendations = (context) => {
-  const fallbackProducts = Array.isArray(productsData?.products) ? productsData.products : [];
-  const normalizedFallback = fallbackProducts
-    .map(mapFallbackProduct)
-    .filter((product) => product.stock > 0 && JEWELLERY_CATEGORY_SET.has(String(product.category).toLowerCase()));
-  return rankProducts(normalizedFallback, context);
-};
-
 export async function POST(request) {
   const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const token = request.cookies?.get('ecocommerce_auth')?.value;
@@ -258,13 +236,13 @@ export async function POST(request) {
       const normalizedCandidates = candidates.map(mapProduct);
       ranked = rankProducts(normalizedCandidates, context);
     } catch (dbError) {
-      dataSource = 'fallback-json';
-      console.error(`${CHATBOT_DEBUG_PREFIX} DB flow failed; using fallback data`, {
+      dataSource = 'database-unavailable';
+      console.error(`${CHATBOT_DEBUG_PREFIX} DB flow failed; returning no recommendations`, {
         requestId,
         name: dbError?.name,
         message: dbError?.message,
       });
-      ranked = getFallbackRecommendations(context);
+      ranked = [];
     }
 
     console.log(`${CHATBOT_DEBUG_PREFIX} Response ready`, {

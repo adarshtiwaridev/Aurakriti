@@ -1,12 +1,10 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import fs from 'fs';
-import path from 'path';
 import mongoose from 'mongoose';
 import connectDB from '@/lib/db';
 import { PRODUCT_CATEGORIES } from '@/lib/catalog';
 import { requireAuth, requireRole } from '@/lib/api-auth';
-import { mapDemoProduct, mapProductDocument } from '@/lib/product-utils';
+import { mapProductDocument } from '@/lib/product-utils';
 import Product from '@/models/Product';
 
 const productUpdateSchema = z.object({
@@ -20,15 +18,6 @@ const productUpdateSchema = z.object({
   isActive: z.boolean().optional(),
   isFeatured: z.boolean().optional(),
 });
-
-function readDemoProduct(id) {
-  const filePath = path.join(process.cwd(), 'src/app/data/products.json');
-  const rawData = fs.readFileSync(filePath, 'utf8');
-  const jsonData = JSON.parse(rawData);
-  const products = Array.isArray(jsonData.products) ? jsonData.products : [];
-  const product = products.find((entry) => entry.id === id);
-  return product ? mapDemoProduct(product) : null;
-}
 
 export async function GET(request, context) {
   const { id } = await context.params;
@@ -46,33 +35,27 @@ export async function GET(request, context) {
   try {
     await connectDB();
 
-    if (mongoose.Types.ObjectId.isValid(id)) {
-      const query = { _id: id };
-      if (!(currentUser && ['seller', 'admin'].includes(currentUser.role))) {
-        query.isActive = true;
-      }
-
-      const dbProduct = await Product.findOne(query).populate('seller', 'name email').populate('reviews.user', 'name').lean();
-      if (dbProduct) {
-        return NextResponse.json({
-          success: true,
-          data: mapProductDocument(dbProduct, currentUser),
-        });
-      }
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ success: false, message: 'Invalid product id.' }, { status: 400 });
     }
-  } catch {
-    // Continue to static fallback
-  }
 
-  const product = readDemoProduct(id);
-  if (!product) {
-    return NextResponse.json({ success: false, message: 'Product not found.' }, { status: 404 });
-  }
+    const query = { _id: id };
+    if (!(currentUser && ['seller', 'admin'].includes(currentUser.role))) {
+      query.isActive = true;
+    }
 
-  return NextResponse.json({
-    success: true,
-    data: product,
-  });
+    const dbProduct = await Product.findOne(query).populate('seller', 'name email').populate('reviews.user', 'name').lean();
+    if (!dbProduct) {
+      return NextResponse.json({ success: false, message: 'Product not found.' }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: mapProductDocument(dbProduct, currentUser),
+    });
+  } catch (error) {
+    return NextResponse.json({ success: false, message: error?.message || 'Unable to load product.' }, { status: 500 });
+  }
 }
 
 export async function PATCH(request, context) {

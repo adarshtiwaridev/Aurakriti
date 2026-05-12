@@ -2,9 +2,6 @@ import fs from 'fs';
 import path from 'path';
 import mongoose from 'mongoose';
 
-import connectDB from '../src/lib/db.js';
-import Carousel from '../src/models/Carousel.js';
-
 const envPath = path.resolve(process.cwd(), '.env.local');
 if (fs.existsSync(envPath)) {
   const envContent = fs.readFileSync(envPath, 'utf8');
@@ -17,8 +14,25 @@ if (fs.existsSync(envPath)) {
   }
 }
 
-// Minimal deterministic sample data.
-// Repo owner asked to "insert some data for it"—carousel is one common empty-state area.
+const carouselSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true, trim: true },
+    subtitle: { type: String, trim: true, default: '' },
+    image: { type: String, required: true },
+    imagePublicId: { type: String, default: '' },
+    offerLabel: { type: String, trim: true, default: '' },
+    offerPrice: { type: Number, default: null },
+    originalPrice: { type: Number, default: null },
+    productLink: { type: String, trim: true, default: '' },
+    ctaText: { type: String, trim: true, default: 'Shop Now' },
+    isActive: { type: Boolean, default: true },
+    order: { type: Number, default: 0 },
+  },
+  { timestamps: true }
+);
+
+const Carousel = mongoose.models.Carousel || mongoose.model('Carousel', carouselSchema);
+
 const seedItems = [
   {
     title: 'Weekend Sale',
@@ -59,10 +73,11 @@ const seedItems = [
 ];
 
 async function run() {
-  await connectDB();
+  const MONGODB_URI = process.env.MONGODB_URI;
+  if (!MONGODB_URI) throw new Error('Missing MONGODB_URI in environment');
 
-  // Upsert by unique signature: title + order
-  // (we avoid depending on Mongo _id to keep deterministic behavior across reruns)
+  await mongoose.connect(MONGODB_URI);
+
   let upserted = 0;
   for (const item of seedItems) {
     const existing = await Carousel.findOne({ title: item.title, order: item.order });
@@ -89,10 +104,7 @@ async function run() {
 
   console.log(`Carousel seed complete. Total: ${count}, Active: ${activeCount}, Newly inserted: ${upserted}`);
 
-  // Close mongoose connection safely
-  try {
-    await mongoose.connection.close();
-  } catch {}
+  try { await mongoose.connection.close(); } catch {}
 }
 
 run().catch(async (err) => {

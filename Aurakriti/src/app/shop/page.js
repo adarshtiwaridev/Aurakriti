@@ -5,7 +5,6 @@ import { useDispatch } from 'react-redux';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import ProductCard from '@/components/ProductCard';
 import LoadingSkeleton from '@/components/ecommerce/LoadingSkeleton';
-import { useCart } from '@/hooks/useCart';
 import { addToCart, setCart } from '@/redux/slices/cartSlice';
 import { addToCart as addToCartRequest } from '@/services/cartService';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,7 +13,6 @@ import { Search, Filter, X } from 'lucide-react';
 export default function ShopPage() {
   const router = useRouter();
   const dispatch = useDispatch();
-  const { items: cartItems } = useCart();
   const { isAuthenticated, user, initialized } = useAuth();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -70,13 +68,14 @@ export default function ShopPage() {
             // Update categories if the backend provides them, otherwise keep default
             if (payload.data.categories) setCategories(['All', ...payload.data.categories]);
           } else {
-            // Fallback to local data if API fails
-            const data = await import('@/app/data/products.json');
-            setProducts(data.products || []);
+            setProducts([]);
           }
         }
       } catch (error) {
         console.error('Failed to load products:', error);
+        if (isMounted) {
+          setProducts([]);
+        }
       } finally {
         if (isMounted) setLoading(false);
       }

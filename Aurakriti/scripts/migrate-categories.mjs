@@ -15,30 +15,32 @@ if (fs.existsSync(envPath)) {
 }
 
 import mongoose from 'mongoose';
-import connectDB from '../src/lib/db.js';
-import Product from '../src/models/Product.js';
-import { JEWELLERY_CATEGORIES } from '../src/constants/categories.js';
 
-/**
- * Migration script to update existing products with invalid categories
- * Maps old/invalid categories to valid jewellery categories
- */
 const categoryMapping = {
-  // Map common misspellings or similar categories
   'neckless': 'necklace',
   'necklaces': 'necklace',
   'chokers': 'choker',
   'mangalsutras': 'mangalsutra',
   'watches': 'watch',
-  // Add any other mappings as needed
 };
+
+const JEWELLERY_CATEGORIES = ['choker', 'necklace', 'mangalsutra', 'watch'];
+
+const productSchema = new mongoose.Schema({
+  title: { type: String, required: true, trim: true },
+  category: { type: String, required: true, trim: true },
+}, { strict: false });
+
+const Product = mongoose.models.Product || mongoose.model('Product', productSchema);
 
 async function migrateCategories() {
   try {
-    await connectDB();
+    const MONGODB_URI = process.env.MONGODB_URI;
+    if (!MONGODB_URI) throw new Error('Missing MONGODB_URI in environment');
+
+    await mongoose.connect(MONGODB_URI);
     console.log('Connected to database');
 
-    // Find all products
     const products = await Product.find({});
     console.log(`Found ${products.length} products to check`);
 
@@ -49,21 +51,17 @@ async function migrateCategories() {
       const currentCategory = product.category?.toLowerCase()?.trim();
       let newCategory = null;
 
-      // Check if category is already valid
       if (JEWELLERY_CATEGORIES.includes(product.category)) {
-        continue; // Skip valid categories
+        continue;
       }
 
-      // Check mapping for common misspellings
       if (categoryMapping[currentCategory]) {
         newCategory = categoryMapping[currentCategory];
       } else {
-        // If no mapping found, assign default category (necklace as it's most common)
         newCategory = 'necklace';
         invalidCount++;
       }
 
-      // Update the product
       await Product.findByIdAndUpdate(product._id, { category: newCategory });
       updatedCount++;
       console.log(`Updated product "${product.title}" from "${product.category}" to "${newCategory}"`);
@@ -73,7 +71,6 @@ async function migrateCategories() {
     console.log(`- Updated ${updatedCount} products`);
     console.log(`- Found ${invalidCount} products with unmapped categories (assigned to 'necklace')`);
 
-    // Verify all products now have valid categories
     const invalidProducts = await Product.find({
       category: { $nin: JEWELLERY_CATEGORIES }
     });
@@ -94,5 +91,4 @@ async function migrateCategories() {
   }
 }
 
-// Run the migration
 migrateCategories();

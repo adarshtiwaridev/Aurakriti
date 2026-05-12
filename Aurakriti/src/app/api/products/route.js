@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import fs from 'fs';
-import path from 'path';
 import connectDB from '@/lib/db';
 import { PRODUCT_CATEGORIES } from '@/lib/catalog';
 import { requireAuth, requireRole } from '@/lib/api-auth';
-import { mapDemoProduct, mapProductDocument } from '@/lib/product-utils';
+import { mapProductDocument } from '@/lib/product-utils';
 import Product from '@/models/Product';
 
 const productSchema = z.object({
@@ -19,13 +17,6 @@ const productSchema = z.object({
   isFeatured: z.boolean().optional(),
   isActive: z.boolean().optional(),
 });
-
-function readDemoProducts() {
-  const filePath = path.join(process.cwd(), 'src/app/data/products.json');
-  const rawData = fs.readFileSync(filePath, 'utf8');
-  const jsonData = JSON.parse(rawData);
-  return Array.isArray(jsonData.products) ? jsonData.products : [];
-}
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -121,7 +112,6 @@ export async function GET(request) {
 
     const total = await Product.countDocuments(query);
     const skip = Math.max(0, (page - 1) * limit);
-    const sort = featured ? { rating: -1, createdAt: -1 } : { createdAt: -1 };
 
     const dbProducts = await Product.find(query)
       .sort(dbSort)
@@ -146,74 +136,9 @@ export async function GET(request) {
         scope: mine ? 'seller' : 'public',
       },
     });
-  } catch {
-    // Fallback to static JSON data when DB is unavailable.
+  } catch (error) {
+    return NextResponse.json({ success: false, message: error?.message || 'Unable to load products.' }, { status: 500 });
   }
-
-  // Read products from JSON file
-  const filePath = path.join(process.cwd(), 'src/app/data/products.json');
-  const rawData = fs.readFileSync(filePath, 'utf8');
-  const jsonData = JSON.parse(rawData);
-  let products = jsonData.products || [];
-
-  // Apply filters
-  if (category && category !== 'All') {
-    products = products.filter(p => p.category === category);
-  }
-
-  if (search?.trim()) {
-    const searchLower = search.trim().toLowerCase();
-    products = products.filter(p =>
-      p.name.toLowerCase().includes(searchLower) ||
-      p.description.toLowerCase().includes(searchLower) ||
-      p.category.toLowerCase().includes(searchLower)
-    );
-  }
-
-  // New filters for fallback
-  const priceMin = Number(searchParams.get('priceMin') ?? 0);
-  const priceMax = Number(searchParams.get('priceMax') ?? 999999);
-  products = products.filter(p => p.price >= priceMin && p.price <= priceMax);
-
-  const ratingGte = Number(searchParams.get('ratingGte') ?? 0);
-  if (ratingGte > 0) products = products.filter(p => (p.rating || 0) >= ratingGte);
-
-  if (searchParams.get('inStock') === 'true') products = products.filter(p => (p.stock || 0) > 0);
-
-  // For mine, since no auth in JSON, return empty if requested
-  if (mine) {
-    products = [];
-  }
-
-  // Dynamic sort for fallback
-  const sortBy = searchParams.get('sortBy') ?? 'newest';
-  switch (sortBy) {
-    case 'price-low': products.sort((a, b) => a.price - b.price); break;
-    case 'price-high': products.sort((a, b) => b.price - a.price); break;
-    case 'rating': products.sort((a, b) => (b.rating || 0) - (a.rating || 0)); break;
-    case 'popular': products.sort((a, b) => ((b.rating || 0) - (a.rating || 0)) || new Date(b.createdAt) - new Date(a.createdAt)); break;
-    default: products.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  }
-
-
-    const total = products.length;
-    const skip = Math.max(0, (page - 1) * limit);
-    const categories = [...new Set(products.map((product) => product.category).filter(Boolean))].sort();
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        products: products.slice(skip, skip + limit),
-        categories: categories.length ? categories : PRODUCT_CATEGORIES,
-        pagination: {
-          page,
-          limit,
-          total,
-          pages: Math.max(1, Math.ceil(total / limit)),
-        },
-        scope: mine ? 'seller' : 'public',
-      },
-    });
   }
 
 

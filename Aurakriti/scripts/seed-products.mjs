@@ -1,8 +1,7 @@
 import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import path from 'path';
-import Product from '../src/models/Product.js';
-import User from '../src/models/User.js';
 
 const envPath = path.resolve(process.cwd(), '.env.local');
 if (fs.existsSync(envPath)) {
@@ -19,6 +18,41 @@ if (fs.existsSync(envPath)) {
 const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) throw new Error('Missing MONGODB_URI in environment');
+
+const JEWELLERY_CATEGORIES = ['choker', 'necklace', 'mangalsutra', 'watch'];
+
+const userSchema = new mongoose.Schema({
+  name: { type: String, required: true, trim: true },
+  email: { type: String, required: true, unique: true, index: true, lowercase: true, trim: true },
+  password: { type: String, required: true },
+  role: { type: String, enum: ['user', 'seller', 'admin'], default: 'user' },
+  isVerified: { type: Boolean, default: false },
+}, { timestamps: true });
+
+userSchema.pre('save', async function () {
+  if (!this.isModified('password')) return;
+  const salt = await bcrypt.genSalt(12);
+  this.password = await bcrypt.hash(this.password, salt);
+});
+
+const productSchema = new mongoose.Schema({
+  title: { type: String, required: true, trim: true },
+  description: { type: String, required: true, trim: true },
+  price: { type: Number, required: true, min: 0 },
+  category: { type: String, required: true, trim: true, enum: JEWELLERY_CATEGORIES },
+  images: { type: [String], default: [] },
+  seller: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  stock: { type: Number, default: 0, min: 0 },
+  isActive: { type: Boolean, default: true },
+  tags: [{ type: String, trim: true }],
+  rating: { type: Number, default: 0, min: 0, max: 5 },
+  reviewCount: { type: Number, default: 0, min: 0 },
+  reviews: { type: Array, default: [] },
+  isFeatured: { type: Boolean, default: false },
+}, { timestamps: true });
+
+const User = mongoose.models.User || mongoose.model('User', userSchema);
+const Product = mongoose.models.Product || mongoose.model('Product', productSchema);
 
 async function run() {
   await mongoose.connect(MONGODB_URI);
