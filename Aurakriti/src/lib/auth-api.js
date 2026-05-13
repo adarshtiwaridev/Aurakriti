@@ -1,5 +1,6 @@
 import connectDB from '@/lib/db';
 import { sendEmail, sendOTPEmail } from '@/lib/email';
+import { createLogger } from '@/lib/logger';
 import {
   attachCorsHeaders,
   canResendOtp,
@@ -23,6 +24,7 @@ import {
 import { generateToken, getTokenFromRequest, verifyToken } from '@/lib/jwt';
 import Otp from '@/models/Otp';
 import User from '@/models/User';
+const logger = createLogger('auth');
 
 const ALLOWED_SIGNUP_ROLES = ['user', 'seller'];
 const VERIFICATION_PURPOSE = 'verification';
@@ -32,7 +34,7 @@ const parseRequestBody = async (request) => {
   try {
     return await request.json();
   } catch (error) {
-    console.error('Error parsing request body:', error);
+    logger.error('Error parsing request body:', error);
     return {};
   }
 };
@@ -42,7 +44,7 @@ const withErrorHandling = (label, handler) => async (request) => {
     const response = await handler(request);
     return attachCorsHeaders(response, request);
   } catch (error) {
-    console.error(`${label} error:`, error);
+    logger.error(`${label} error:`, error);
 
     if (error?.code === 11000) {
       return attachCorsHeaders(
@@ -80,7 +82,7 @@ const createOtpRecord = async (userId, purpose) => {
 
     return { otpRecord, otp };
   } catch (error) {
-    console.error('Error creating OTP record:', error);
+    logger.error('Error creating OTP record:', error);
     throw error;
   }
 };
@@ -89,7 +91,7 @@ const getLatestOtpRecord = async (userId, purpose) => {
   try {
     return await Otp.findOne({ user: userId, purpose, isUsed: false }).sort({ sentAt: -1 });
   } catch (error) {
-    console.error('Error fetching OTP record:', error);
+    logger.error('Error fetching OTP record:', error);
     return null;
   }
 };
@@ -103,12 +105,12 @@ const createAndSendOtp = async (user, purpose) => {
     try {
       await sendOTPEmail(user.email, otp, { purpose });
     } catch (emailError) {
-      console.error('Email sending error:', emailError);
+      logger.warn('OTP email sending failed, OTP record still created:', emailError.message);
     }
 
     return otpRecord;
   } catch (error) {
-    console.error('Error in createAndSendOtp:', error);
+    logger.error('Error in createAndSendOtp:', error);
     throw error;
   }
 };
@@ -141,8 +143,9 @@ export const signupHandler = withErrorHandling('Signup', async (request) => {
     return createErrorResponse('Name, email, and password are required.', {}, 400);
   }
 
-  if (password.length < 6) {
-    return createErrorResponse('Password must be at least 6 characters long.', {}, 400);
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+  if (!passwordRegex.test(password)) {
+    return createErrorResponse('Password must be at least 8 characters long, and include an uppercase letter, a lowercase letter, and a number.', {}, 400);
   }
 
   if (!ALLOWED_SIGNUP_ROLES.includes(role)) {
@@ -163,7 +166,7 @@ export const signupHandler = withErrorHandling('Signup', async (request) => {
     existingUser.isVerified = false;
     user = existingUser;
   } else {
-    console.log('Creating new user');
+    logger.info('Creating new user account', { email });
     user = new User({
       name,
       email,
@@ -178,12 +181,37 @@ export const signupHandler = withErrorHandling('Signup', async (request) => {
   let otpSentAt = null;
   let otpRecord = null;
 
+  // Development bypass: Auto-verify user if email not configured
+  const isEmailConfigured = !!(process.env.EMAIL_USER && process.env.EMAIL_PASS);
+
+  if (!isEmailConfigured) {
+    // Auto-verify user for development without email
+    user.isVerified = true;
+    await user.save();
+
+    // Generate token for immediate login
+    const token = generateToken({ userId: user._id, email: user.email, role: user.role });
+    const response = createSuccessResponse(
+      'Account created and verified successfully (development mode).',
+      {
+        user: sanitizeUser(user),
+        token,
+        isVerified: true,
+        redirectTo: getDashboardRoute(user.role)
+      },
+      201
+    );
+
+    setAuthCookie(response, token);
+    return response;
+  }
+
   try {
     otpRecord = await createAndSendOtp(user, VERIFICATION_PURPOSE);
     otpSent = true;
     otpSentAt = otpRecord.sentAt;
   } catch (error) {
-    console.error('OTP creation/send error:', error);
+    logger.error('OTP creation/send error during signup:', error);
   }
 
   return createSuccessResponse(
@@ -232,7 +260,7 @@ export const loginHandler = withErrorHandling('Login', async (request) => {
         otpSent = true;
         otpSentAt = otpRecord.sentAt;
       } catch (error) {
-        console.error('Login verification OTP send failed:', error);
+        logger.error('Login verification OTP send failed:', error);
       }
     } else {
       otpSentAt = latestOtp.sentAt;
@@ -326,7 +354,7 @@ export const verifyOtpHandler = withErrorHandling('Verify OTP', async (request) 
       `<p>Hi ${user.name},</p><p>Your email was verified successfully. Welcome to EcoCommerce.</p>`
     );
   } catch (error) {
-    console.error('Welcome email failed:', error);
+    logger.warn('Welcome email failed after OTP verification:', error.message);
   }
 
   return createSuccessResponse('Email verified successfully. Please sign in to continue.', {
@@ -436,8 +464,9 @@ export const resetPasswordHandler = withErrorHandling('Reset password', async (r
     return createErrorResponse('Email, OTP, and password are required.', {}, 400);
   }
 
-  if (password.length < 6) {
-    return createErrorResponse('Password must be at least 6 characters long.', {}, 400);
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+  if (!passwordRegex.test(password)) {
+    return createErrorResponse('Password must be at least 8 characters long, and include an uppercase letter, a lowercase letter, and a number.', {}, 400);
   }
 
   const user = await User.findOne({ email });

@@ -3,7 +3,7 @@ import authReducer from "./slices/authSlice";
 import productReducer from "./slices/productSlice";
 import cartReducer from "./slices/cartSlice";
 import compareReducer from "./slices/compareSlice";
-
+import wishlistReducer from './slices/wishlistSlice';
 const loadState = () => {
   if (typeof window === 'undefined') return undefined;
   try {
@@ -32,6 +32,7 @@ export const store = configureStore({
     product: productReducer,
     cart: cartReducer,
     compare: compareReducer,
+    wishlist: wishlistReducer,
   },
   preloadedState: loadState(),
 });

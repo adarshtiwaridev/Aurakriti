@@ -1,4 +1,7 @@
 import mongoose from "mongoose";
+import { createLogger } from "@/lib/logger";
+
+const logger = createLogger("db");
 
 let cached = global.mongoose;
 
@@ -26,15 +29,15 @@ async function connectWithRetry(attempt = 1) {
 
   try {
     const connection = await mongoose.connect(MONGODB_URI, opts);
-    console.log("✅ MongoDB Connected");
+    logger.info("MongoDB connected successfully");
     return connection;
   } catch (error) {
     if (attempt >= MAX_MONGODB_RETRIES) {
-      console.error(`❌ Failed after ${attempt} attempts`, error);
+      logger.error(`MongoDB failed after ${attempt} attempts`, error);
       throw error;
     }
 
-    console.warn(`Retrying MongoDB (${attempt})...`);
+    logger.warn(`Retrying MongoDB connection, attempt ${attempt}`);
 
     await new Promise((resolve) =>
       setTimeout(resolve, MONGODB_RETRY_DELAY_MS)
