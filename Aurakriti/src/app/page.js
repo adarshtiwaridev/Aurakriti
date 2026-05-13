@@ -137,6 +137,7 @@ export default function HomePage() {
   const [activeSlide, setActiveSlide] = useState(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [products, setProducts] = useState([]);
   const deferredSearchTerm = useDeferredValue(searchTerm);
   const { initialized, isAuthenticated, user } = useAuth();
@@ -153,16 +154,18 @@ export default function HomePage() {
     let isMounted = true;
 
     async function loadProducts() {
+      setLoadError("");
+
       try {
         const response = await fetch("/api/products?featured=true", {
           cache: "no-store",
         });
 
-        if (!response.ok) {
-          throw new Error("Unable to fetch featured products");
+        const data = await response.json();
+        if (!response.ok || !data?.success) {
+          throw new Error(data?.message || "Unable to fetch featured products");
         }
 
-        const data = await response.json();
         const items = Array.isArray(data)
           ? data
           : Array.isArray(data?.data?.products)
@@ -181,9 +184,7 @@ export default function HomePage() {
         }
       } finally {
         if (isMounted) {
-          window.setTimeout(() => {
-            setIsLoading(false);
-          }, 500);
+          setIsLoading(false);
         }
       }
     }
@@ -222,7 +223,7 @@ export default function HomePage() {
     }
 
     try {
-      if (!isAuthenticated || product.isDemo) {
+      if (!isAuthenticated) {
         dispatch(addToCart({
           id: product.id,
           productId: product.id,
@@ -488,7 +489,14 @@ export default function HomePage() {
                 ))}
           </div>
 
-          {!isLoading && filteredProducts.length === 0 ? (
+          {!isLoading && loadError ? (
+            <div className="mt-8 rounded-[1.75rem] border border-red-200 bg-red-50 p-6 text-center shadow-sm">
+              <p className="text-lg font-semibold text-red-700">Could not load featured products</p>
+              <p className="mt-2 text-sm text-red-600">{loadError}</p>
+            </div>
+          ) : null}
+
+          {!isLoading && !loadError && filteredProducts.length === 0 ? (
             <div className="mt-8 rounded-[1.75rem] border border-dashed border-stone-300 bg-white p-10 text-center shadow-sm">
               <p className="text-lg font-semibold text-stone-900">
                 No products matched your search

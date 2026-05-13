@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
+import { createLogger } from '@/lib/logger';
 import { requireRole } from '@/lib/api-auth';
 import Order from '@/models/Order';
 import PaymentSession from '@/models/PaymentSession';
@@ -11,8 +12,9 @@ import { generateAndStoreInvoice } from '@/lib/invoice';
 import { getAppUrl } from '@/lib/app-url';
 import mongoose from 'mongoose';
 
-export const runtime = 'nodejs';
+const logger = createLogger('payment/verify');  // ← correct position, after ALL imports
 
+export const runtime = 'nodejs';
 export async function POST(request) {
   const auth = await requireRole(request, ['user']);
   if (auth.error) {
@@ -145,14 +147,14 @@ export async function POST(request) {
       await populatedOrder.save();
       invoiceMeta = invoice;
     } catch (invoiceError) {
-      console.error('[Payment/Verify] Invoice generation failed:', invoiceError);
+      logger.error('Invoice generation failed', invoiceError);
     }
 
     sendOrderConfirmationEmail(populatedOrder, auth.user).catch((error) =>
-      console.error('Order confirmation email error:', error.message)
+      logger.error('Order confirmation email failed', error.message)
     );
     notifySellersForNewOrder(populatedOrder, auth.user).catch((error) =>
-      console.error('Seller notification error:', error.message)
+      logger.error('Seller notification failed', error.message)
     );
 
     const orderCode = String(populatedOrder._id).slice(-8).toUpperCase();
@@ -168,7 +170,7 @@ export async function POST(request) {
           <p><strong>Total:</strong> Rs ${Number(populatedOrder.totalAmount || 0).toFixed(2)}</p>
         </div>
       `
-    ).catch((error) => console.error('Payment success email error:', error.message));
+    ).catch((error) => logger.error('Payment success email failed', error.message));
 
     if (invoiceMeta?.publicUrl) {
       const appUrl = getAppUrl();
@@ -176,7 +178,7 @@ export async function POST(request) {
         auth.user.email,
         `Invoice #${orderCode} - EcoCommerce`,
         `<p>Your invoice is ready. <a href="${appUrl}${invoiceMeta.publicUrl}">Download Invoice PDF</a></p>`
-      ).catch((error) => console.error('Invoice email error:', error.message));
+      ).catch((error) => logger.error('Invoice email failed', error.message));
     }
 
     return NextResponse.json({
@@ -188,7 +190,7 @@ export async function POST(request) {
       },
     });
   } catch (error) {
-    console.error('POST /api/payment/verify failed:', error);
+    logger.error('POST /api/payment/verify failed', error);
     return NextResponse.json({ success: false, message: error.message || 'Payment verification failed.' }, { status: 500 });
   }
 }

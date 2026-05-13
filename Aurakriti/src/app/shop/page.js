@@ -23,6 +23,7 @@ export default function ShopPage() {
   const [activeCategory, setActiveCategory] = useState(searchParams.get('category') || 'All');
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [toastMessage, setToastMessage] = useState('');
   const [sortBy, setSortBy] = useState(searchParams.get('sortBy') || 'newest');
   const [showSidebar, setShowSidebar] = useState(false);
@@ -56,6 +57,7 @@ export default function ShopPage() {
     let isMounted = true;
     const fetchProducts = async () => {
       setLoading(true);
+      setError('');
       try {
         const response = await fetch(`/api/products?${searchParams.toString()}`, {
           credentials: 'include'
@@ -104,7 +106,7 @@ export default function ShopPage() {
     }
 
     try {
-      if (!isAuthenticated || product.isDemo) {
+      if (!isAuthenticated) {
         dispatch(addToCart({
           id: product._id || product.id,
           productId: product._id || product.id,
@@ -211,6 +213,12 @@ export default function ShopPage() {
                 Showing {products.length} product{products.length !== 1 ? 's' : ''} 
                 {activeCategory !== 'All' && ` in ${activeCategory}`}
               </div>
+
+              {error ? (
+                <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                  {error}
+                </div>
+              ) : null}
 
               {loading ? (
                 <LoadingSkeleton />

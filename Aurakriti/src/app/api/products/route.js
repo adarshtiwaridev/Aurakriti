@@ -42,6 +42,18 @@ export async function GET(request) {
     await connectDB();
 
     const query = {};
+    if (includeInactive) {
+      if (!['seller', 'admin'].includes(currentUser.role)) {
+        return NextResponse.json({ success: false, message: 'Only sellers can view private inventory.' }, { status: 403 });
+      }
+
+      if (currentUser.role === 'seller') {
+        query.seller = currentUser._id;
+      } else if (seller) {
+        query.seller = seller;
+      }
+    }
+
     if (mine) {
       if (!['seller', 'admin'].includes(currentUser.role)) {
         return NextResponse.json({ success: false, message: 'Only sellers can view private inventory.' }, { status: 403 });
@@ -119,8 +131,15 @@ export async function GET(request) {
       .limit(limit)
       .lean();
 
+    const categoriesQuery = mine && query.seller
+      ? { seller: query.seller }
+      : includeInactive
+        ? query.seller
+          ? { seller: query.seller }
+          : {}
+        : { isActive: true };
 
-    const categoriesFromDb = await Product.distinct('category', mine && query.seller ? { seller: query.seller } : { isActive: true });
+    const categoriesFromDb = await Product.distinct('category', categoriesQuery);
 
     return NextResponse.json({
       success: true,

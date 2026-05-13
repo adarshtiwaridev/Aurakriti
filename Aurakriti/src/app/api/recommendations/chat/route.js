@@ -206,20 +206,26 @@ export async function POST(request) {
       mongoQuery,
     });
 
-    let ranked = [];
-    let dataSource = 'mongodb';
+    const dbConnection = await connectDB();
+    console.log(`${CHATBOT_DEBUG_PREFIX} DB connected`, {
+      requestId,
+      dbName: dbConnection?.connection?.name,
+      host: dbConnection?.connection?.host,
+    });
 
-    try {
-      const dbConnection = await connectDB();
-      console.log(`${CHATBOT_DEBUG_PREFIX} DB connected`, {
-        requestId,
-        dbName: dbConnection?.connection?.name,
-        host: dbConnection?.connection?.host,
-      });
+    let candidates = await Product.find(mongoQuery)
+      .sort({ rating: -1, createdAt: -1 })
+      .limit(60)
+      .lean();
 
-      let candidates = await Product.find(mongoQuery)
+    if (!candidates.length) {
+      candidates = await Product.find({
+        isActive: true,
+        stock: { $gt: 0 },
+        category: { $in: Array.from(JEWELLERY_CATEGORY_SET) },
+      })
         .sort({ rating: -1, createdAt: -1 })
-        .limit(60)
+        .limit(20)
         .lean();
 
       if (!candidates.length) {
@@ -245,9 +251,12 @@ export async function POST(request) {
       ranked = [];
     }
 
+    const normalizedCandidates = candidates.map(mapProduct);
+    const ranked = rankProducts(normalizedCandidates, context);
+
     console.log(`${CHATBOT_DEBUG_PREFIX} Response ready`, {
       requestId,
-      dataSource,
+      dataSource: 'mongodb',
       recommendationCount: ranked.length,
     });
 
@@ -256,7 +265,7 @@ export async function POST(request) {
       data: {
         query,
         parsed: context,
-        dataSource,
+        dataSource: 'mongodb',
         recommendations: ranked,
         fallbackMessage: ranked.length ? null : 'No exact match found. Try a different jewellery query.',
       },

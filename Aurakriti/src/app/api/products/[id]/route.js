@@ -21,6 +21,11 @@ const productUpdateSchema = z.object({
 
 export async function GET(request, context) {
   const { id } = await context.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return NextResponse.json({ success: false, message: 'Product not found.' }, { status: 404 });
+  }
+
   let currentUser = null;
 
   try {
