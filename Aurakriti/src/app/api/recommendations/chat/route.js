@@ -227,6 +227,28 @@ export async function POST(request) {
         .sort({ rating: -1, createdAt: -1 })
         .limit(20)
         .lean();
+
+      if (!candidates.length) {
+        candidates = await Product.find({
+          isActive: true,
+          stock: { $gt: 0 },
+          category: { $in: Array.from(JEWELLERY_CATEGORY_SET) },
+        })
+          .sort({ rating: -1, createdAt: -1 })
+          .limit(20)
+          .lean();
+      }
+
+      const normalizedCandidates = candidates.map(mapProduct);
+      ranked = rankProducts(normalizedCandidates, context);
+    } catch (dbError) {
+      dataSource = 'database-unavailable';
+      console.error(`${CHATBOT_DEBUG_PREFIX} DB flow failed; returning no recommendations`, {
+        requestId,
+        name: dbError?.name,
+        message: dbError?.message,
+      });
+      ranked = [];
     }
 
     const normalizedCandidates = candidates.map(mapProduct);

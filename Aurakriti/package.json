@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "seed:products": "node scripts/seed-products.mjs",
+    "seed:carousel": "node scripts/seed-carousel.mjs",
     "migrate:categories": "node scripts/migrate-categories.mjs"
   },
   "dependencies": {

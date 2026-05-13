@@ -111,7 +111,6 @@ const promoBanners = [
   },
 ];
 
-
 const uspItems = [
   {
     id: 1,
@@ -176,12 +175,12 @@ export default function HomePage() {
               : [];
 
         if (isMounted) {
-          setProducts(normalizeProducts(items));
+          setProducts(items.length > 0 ? normalizeProducts(items) : []);
         }
       } catch (error) {
+        console.error("Failed to load featured products:", error);
         if (isMounted) {
           setProducts([]);
-          setLoadError(error?.message || "Unable to load featured products.");
         }
       } finally {
         if (isMounted) {

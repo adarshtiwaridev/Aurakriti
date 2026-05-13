@@ -258,6 +258,19 @@ npm install
 npm run dev
 ```
 
+## Seed Sample Data
+
+To populate MongoDB with demo seller and products used by the product APIs:
+
+```bash
+npm run seed:products
+```
+
+This inserts or updates:
+
+- Seller account: `seller@aurakriti.com` / `Seller@123`
+- Products from `src/app/data/products.json`
+
 App runs locally at:
 
 ```text

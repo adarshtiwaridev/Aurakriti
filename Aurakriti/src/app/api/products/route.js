@@ -156,13 +156,9 @@ export async function GET(request) {
       },
     });
   } catch (error) {
-    console.error('GET /api/products failed:', error);
-    return NextResponse.json(
-      { success: false, message: 'Unable to fetch products right now.' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, message: error?.message || 'Unable to load products.' }, { status: 500 });
   }
-}
+  }
 
 
 export async function POST(request) {

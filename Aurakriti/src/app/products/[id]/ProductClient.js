@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { getProduct } from '@/services/productService';
 import { addToCart as addToCartRequest } from '@/services/cartService';
@@ -63,7 +63,6 @@ function ErrorCard({ message, productId }) {
 
 export default function ProductDetailsPage() {
   const params = useParams();
-  const router = useRouter();
   const dispatch = useDispatch();
   const { isAuthenticated, user, initialized } = useAuth();
   const [product, setProduct] = useState(null);

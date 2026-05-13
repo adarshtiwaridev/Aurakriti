@@ -5,7 +5,6 @@ import { useDispatch } from 'react-redux';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import ProductCard from '@/components/ProductCard';
 import LoadingSkeleton from '@/components/ecommerce/LoadingSkeleton';
-import { useCart } from '@/hooks/useCart';
 import { addToCart, setCart } from '@/redux/slices/cartSlice';
 import { addToCart as addToCartRequest } from '@/services/cartService';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,7 +13,6 @@ import { Search, Filter, X } from 'lucide-react';
 export default function ShopPage() {
   const router = useRouter();
   const dispatch = useDispatch();
-  const { items: cartItems } = useCart();
   const { isAuthenticated, user, initialized } = useAuth();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -67,24 +65,18 @@ export default function ShopPage() {
         const payload = await response.json();
 
         if (isMounted) {
-          if (!response.ok || !payload.success) {
+          if (payload.success) {
+            setProducts(payload.data.products || []);
+            // Update categories if the backend provides them, otherwise keep default
+            if (payload.data.categories) setCategories(['All', ...payload.data.categories]);
+          } else {
             setProducts([]);
-            setCategories(['All']);
-            setError(payload.message || 'Failed to load products.');
-            return;
-          }
-
-          setProducts(payload.data.products || []);
-          if (payload.data.categories) {
-            setCategories(['All', ...payload.data.categories]);
           }
         }
       } catch (error) {
         console.error('Failed to load products:', error);
         if (isMounted) {
           setProducts([]);
-          setCategories(['All']);
-          setError('Failed to load products. Please try again.');
         }
       } finally {
         if (isMounted) setLoading(false);

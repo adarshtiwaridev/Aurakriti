@@ -40,16 +40,16 @@ export async function GET(request, context) {
   try {
     await connectDB();
 
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ success: false, message: 'Invalid product id.' }, { status: 400 });
+    }
+
     const query = { _id: id };
     if (!(currentUser && ['seller', 'admin'].includes(currentUser.role))) {
       query.isActive = true;
     }
 
-    const dbProduct = await Product.findOne(query)
-      .populate('seller', 'name email')
-      .populate('reviews.user', 'name')
-      .lean();
-
+    const dbProduct = await Product.findOne(query).populate('seller', 'name email').populate('reviews.user', 'name').lean();
     if (!dbProduct) {
       return NextResponse.json({ success: false, message: 'Product not found.' }, { status: 404 });
     }
@@ -59,11 +59,7 @@ export async function GET(request, context) {
       data: mapProductDocument(dbProduct, currentUser),
     });
   } catch (error) {
-    console.error('GET /api/products/[id] failed:', error);
-    return NextResponse.json(
-      { success: false, message: 'Unable to fetch product right now.' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, message: error?.message || 'Unable to load product.' }, { status: 500 });
   }
 }
 
