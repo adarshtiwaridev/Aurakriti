@@ -32,8 +32,101 @@ export default function CartItem({ item, onIncrement, onDecrement, onRemove }) {
             <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-[#f2e5d4] to-[#e7dccf]">
               <span className="text-3xl">✨</span>
             </div>
-          )}
-        </div>
+          </motion.div>
+
+          {/* Product Info */}
+          <div className="flex flex-col min-w-0 flex-1">
+            {/* Category */}
+            {item.category && (
+              <p
+                className="
+                  text-[11px]
+                  uppercase tracking-[0.2em]
+                  text-[#b99662]
+                  font-bold
+                  mb-1
+                "
+              >
+                {item.category}
+              </p>
+            )}
+
+            {/* Title */}
+            <h3
+              className="
+                text-base sm:text-lg lg:text-xl
+                font-black text-[#2f241c]
+                leading-snug line-clamp-2
+                transition-colors duration-300
+                group-hover:text-[#c3922e]
+              "
+            >
+              {item.title}
+            </h3>
+
+            {/* Description */}
+            {item.description && (
+              <p
+                className="
+                  mt-2 text-sm
+                  text-[#8b7355]
+                  line-clamp-2
+                  max-w-xl
+                "
+              >
+                {item.description}
+              </p>
+            )}
+
+            {/* Price */}
+            <div className="mt-4 flex items-end gap-3 flex-wrap">
+              <span
+                className="
+                  text-2xl sm:text-3xl
+                  font-black text-[#c3922e]
+                "
+              >
+                ₹{item.price.toFixed(2)}
+              </span>
+
+              {item.originalPrice &&
+                item.originalPrice > item.price && (
+                  <>
+                    <span
+                      className="
+                        text-sm line-through
+                        text-[#b9a28a]
+                      "
+                    >
+                      ₹{item.originalPrice.toFixed(2)}
+                    </span>
+
+                    <span
+                      className="
+                        px-2.5 py-1 rounded-full
+                        bg-green-100
+                        text-green-700
+                        text-xs font-bold
+                      "
+                    >
+                      Save{' '}
+                      {Math.round(
+                        ((item.originalPrice - item.price) /
+                          item.originalPrice) *
+                          100
+                      )}
+                      %
+                    </span>
+                  </>
+                )}
+            </div>
+
+            {/* Extra Info */}
+            <div className="mt-4 flex flex-wrap items-center gap-4">
+              <div className="flex items-center gap-1.5 text-xs text-[#8b7355]">
+                <Truck size={14} />
+                Free Delivery
+              </div>
 
         <div className="flex-1 min-w-0">
           <h3 className="text-base sm:text-lg font-bold text-[#3d2f24] line-clamp-2">
@@ -51,7 +144,6 @@ export default function CartItem({ item, onIncrement, onDecrement, onRemove }) {
             Subtotal: ₹{subtotal.toFixed(2)}
           </p>
         </div>
-      </div>
 
       {/* ---------------- CONTROLS ---------------- */}
       <div className="flex flex-col gap-4 sm:items-end">
