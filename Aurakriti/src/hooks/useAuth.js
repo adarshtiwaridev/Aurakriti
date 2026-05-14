@@ -41,6 +41,16 @@ export const useAuth = () => {
     }
 
     const initializeAuthState = async () => {
+      const localUser = authService.getCurrentUser();
+      const localToken = authService.getToken();
+
+      if (localUser && localToken) {
+        dispatch(initializeAuth({
+          user: localUser,
+          token: localToken,
+        }));
+      }
+
       try {
         const response = await authService.fetchMe();
         if (response?.user) {
@@ -51,7 +61,12 @@ export const useAuth = () => {
           return;
         }
       } catch (error) {
-        // No session or invalid token; leave auth state empty.
+        if (localUser || localToken) {
+          authService.removeToken();
+          authService.removeUser();
+          dispatch(logoutAction());
+          return;
+        }
       } finally {
         dispatch(authInitialized());
       }

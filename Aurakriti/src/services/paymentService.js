@@ -1,5 +1,21 @@
+import { apiRequest } from '@/services/apiClient';
+
+let razorpayScriptPromise = null;
+
+function getCspNonce() {
+  if (typeof document === 'undefined') {
+    return '';
+  }
+
+  return document.querySelector('meta[name="csp-nonce"]')?.getAttribute('content') || '';
+}
+
 function loadScript(src) {
-  return new Promise((resolve) => {
+  if (razorpayScriptPromise) {
+    return razorpayScriptPromise;
+  }
+
+  razorpayScriptPromise = new Promise((resolve) => {
     if (typeof window === 'undefined') {
       resolve(false);
       return;
@@ -13,30 +29,30 @@ function loadScript(src) {
     const script = document.createElement('script');
     script.src = src;
     script.async = true;
+    const nonce = getCspNonce();
+    if (nonce) {
+      script.nonce = nonce;
+    }
     script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
+    script.onerror = () => {
+      razorpayScriptPromise = null;
+      resolve(false);
+    };
     document.body.appendChild(script);
   });
+
+  return razorpayScriptPromise;
 }
 
-async function parseResponse(response) {
-  const payload = await response.json();
-
-  if (!response.ok || !payload.success) {
-    throw new Error(payload.message || 'Payment request failed');
-  }
-
-  return payload.data;
+export async function ensureRazorpayLoaded() {
+  const loaded = await loadScript('https://checkout.razorpay.com/v1/checkout.js');
+  return loaded && typeof window !== 'undefined' && Boolean(window.Razorpay);
 }
 
 async function markPaymentFailure(orderId, razorpayOrderId, reason) {
   try {
-    await fetch('/api/payment/failure', {
+    await apiRequest('/api/payment/failure', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
       body: JSON.stringify({
         orderId,
         razorpay_order_id: razorpayOrderId,
@@ -50,33 +66,22 @@ async function markPaymentFailure(orderId, razorpayOrderId, reason) {
 
 export async function createCheckout(shippingAddress, method) {
   const endpoint = method === 'cod' ? '/api/checkout' : '/api/payment/create-order';
-  const response = await fetch(endpoint, {
+  return apiRequest(endpoint, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
     body: JSON.stringify({ shippingAddress, ...(method ? { method } : {}) }),
   });
-
-  return parseResponse(response);
 }
 
 export async function finalizeOrder(orderId, payment) {
   const endpoint = payment?.method === 'cod' ? '/api/order/confirm' : '/api/payment/verify';
-  const response = await fetch(endpoint, {
+  return apiRequest(endpoint, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
     body: JSON.stringify(payment?.method === 'cod' ? { orderId } : { orderId, ...payment }),
   });
-
-  return parseResponse(response);
 }
 
 export async function processPayment({ checkoutData, customer }) {
+  const checkoutSessionId = checkoutData.checkoutSessionId || checkoutData.paymentSessionId || checkoutData.orderId;
   const razorpayOrder = checkoutData.razorpay;
 
   if (!razorpayOrder?.id || !razorpayOrder?.key) {
@@ -84,14 +89,14 @@ export async function processPayment({ checkoutData, customer }) {
   }
 
   if (razorpayOrder.mode === 'mock' || razorpayOrder.mock) {
-    return finalizeOrder(checkoutData.orderId, {
+    return finalizeOrder(checkoutSessionId, {
       razorpay_order_id: razorpayOrder.id,
       razorpay_payment_id: `mock_payment_${Date.now()}`,
       razorpay_signature: 'mock_signature',
     });
   }
 
-  const loaded = await loadScript('https://checkout.razorpay.com/v1/checkout.js');
+  const loaded = await ensureRazorpayLoaded();
   if (!loaded || !window.Razorpay) {
     throw new Error('Unable to load Razorpay checkout.');
   }
@@ -106,7 +111,7 @@ export async function processPayment({ checkoutData, customer }) {
       order_id: razorpayOrder.id,
       handler: async function (paymentResponse) {
         try {
-          const order = await finalizeOrder(checkoutData.orderId, paymentResponse);
+          const order = await finalizeOrder(checkoutSessionId, paymentResponse);
           resolve(order);
         } catch (error) {
           reject(error);
@@ -122,7 +127,7 @@ export async function processPayment({ checkoutData, customer }) {
       },
       modal: {
         ondismiss: async () => {
-          await markPaymentFailure(checkoutData.orderId, razorpayOrder.id, 'Payment was cancelled by user');
+          await markPaymentFailure(checkoutSessionId, razorpayOrder.id, 'Payment was cancelled by user');
           reject(new Error('Payment was cancelled.'));
         },
       },
@@ -132,7 +137,7 @@ export async function processPayment({ checkoutData, customer }) {
 
     rzp.on('payment.failed', async (response) => {
       const description = response?.error?.description || 'Payment failed at Razorpay.';
-      await markPaymentFailure(checkoutData.orderId, razorpayOrder.id, description);
+      await markPaymentFailure(checkoutSessionId, razorpayOrder.id, description);
       reject(new Error(description));
     });
 

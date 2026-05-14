@@ -1,5 +1,5 @@
-import RegisterPage from '../auth/register/page';
+import { redirect } from 'next/navigation';
 
 export default function SignupPage() {
-  return <RegisterPage />;
+  redirect('/auth/register');
 }

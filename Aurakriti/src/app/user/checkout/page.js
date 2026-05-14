@@ -11,13 +11,12 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useDispatch } from 'react-redux';
 import { clearCart, setCart } from '@/redux/slices/cartSlice';
-import { addToCart as addToCartRequest, clearServerCart, fetchCart } from '@/services/cartService';
-import { createCheckout, finalizeOrder, processPayment } from '@/services/paymentService';
-
-const MONGO_ID_PATTERN = /^[a-f\d]{24}$/i;
+import { addToCart as addToCartRequest, fetchCart } from '@/services/cartService';
+import { createCheckout, ensureRazorpayLoaded, finalizeOrder, processPayment } from '@/services/paymentService';
+import { isMongoObjectId } from '@/utils/helpers';
 
 export default function CheckoutPage() {
-  const { cartItems = [], totalPrice = 0, shippingCost = 0, cartCount } = useCart();
+  const { cartItems = [], totalPrice = 0, shippingCost = 0, cartCount, loading: cartLoading, refreshCart } = useCart();
   const router = useRouter();
   const dispatch = useDispatch();
   const { user, initialized, isAuthenticated } = useAuth();
@@ -62,6 +61,22 @@ export default function CheckoutPage() {
     }
   }, [initialized, isAuthenticated, router, user?.role]);
 
+  useEffect(() => {
+    if (!initialized || !isAuthenticated || user?.role !== 'user') {
+      return;
+    }
+
+    refreshCart?.({ mergeGuestItems: false }).catch(() => null);
+  }, [initialized, isAuthenticated, refreshCart, user?.role]);
+
+  useEffect(() => {
+    if (paymentMethod !== 'online') {
+      return;
+    }
+
+    ensureRazorpayLoaded().catch(() => null);
+  }, [paymentMethod]);
+
   const validateForm = () => {
     const newErrors = {};
     if (!userDetails.name.trim()) newErrors.name = 'Name is required';
@@ -89,17 +104,16 @@ export default function CheckoutPage() {
     }
     setIsProcessing(true);
     try {
-      const localOnlyItems = cartItems.filter((item) => item.productId === item.id);
-      const unsupportedItems = localOnlyItems.filter((item) => !MONGO_ID_PATTERN.test(String(item.productId || item.id)));
+      const localOnlyItems = cartItems.filter((item) => item.source === 'local');
+      const unsupportedItems = localOnlyItems.filter((item) => !isMongoObjectId(item.productId));
 
       if (unsupportedItems.length > 0) {
         throw new Error('Demo items cannot be checked out. Please shop from live catalog items before placing an order.');
       }
 
       if (localOnlyItems.length > 0) {
-        await clearServerCart().catch(() => null);
         for (const item of localOnlyItems) {
-          await addToCartRequest(item.productId || item.id, item.quantity || 1);
+          await addToCartRequest(item.productId, item.quantity || 1);
         }
         const syncedCart = await fetchCart();
         dispatch(setCart(syncedCart.items ?? []));
@@ -113,9 +127,9 @@ export default function CheckoutPage() {
         const checkoutData = await createCheckout(userDetails);
         order = await processPayment({ checkoutData, customer: userDetails });
       }
+      const latestCart = await fetchCart().catch(() => ({ items: [] }));
       dispatch(clearCart());
-      dispatch(setCart([]));
-      try { await clearServerCart(); } catch { /* ignore */ }
+      dispatch(setCart(latestCart.items ?? []));
       setPlacedOrderId(order.id);
       setOrderPlaced(true);
       if (typeof window !== 'undefined') {
@@ -139,6 +153,21 @@ export default function CheckoutPage() {
             className="h-12 w-12 rounded-full border-4 border-[#f2e5d4] border-t-[#c9a14a] mx-auto mb-4"
           />
           <p className="text-[#6b5645]">Loading checkout...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (cartLoading && !orderPlaced) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[#fffcf8] to-white flex items-center justify-center">
+        <div className="text-center">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+            className="h-12 w-12 rounded-full border-4 border-[#f2e5d4] border-t-[#c9a14a] mx-auto mb-4"
+          />
+          <p className="text-[#6b5645]">Loading your cart...</p>
         </div>
       </div>
     );

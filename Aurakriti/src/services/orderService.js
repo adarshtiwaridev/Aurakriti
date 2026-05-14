@@ -14,6 +14,25 @@ async function parseResponse(response) {
   return payload.data;
 }
 
+function normalizeOrderPayload(data) {
+  if (!data) {
+    return data;
+  }
+
+  if (Array.isArray(data.orders)) {
+    return {
+      ...data,
+      orders: data.orders,
+    };
+  }
+
+  if (data.order) {
+    return data.order;
+  }
+
+  return data;
+}
+
 export async function getOrders(view) {
   const query = view ? `?view=${encodeURIComponent(view)}` : '';
   const response = await fetch(`/api/orders${query}`, {
@@ -21,7 +40,8 @@ export async function getOrders(view) {
     cache: 'no-store',
   });
 
-  return parseResponse(response);
+  const data = await parseResponse(response);
+  return normalizeOrderPayload(data);
 }
 
 export async function updateOrderStatus(orderId, status, itemId, trackingDetails) {
@@ -34,7 +54,8 @@ export async function updateOrderStatus(orderId, status, itemId, trackingDetails
     body: JSON.stringify({ status, itemId, trackingDetails }),
   });
 
-  return parseResponse(response);
+  const data = await parseResponse(response);
+  return normalizeOrderPayload(data);
 }
 
 export async function getOrderById(orderId) {
@@ -43,7 +64,8 @@ export async function getOrderById(orderId) {
     cache: 'no-store',
   });
 
-  return parseResponse(response);
+  const data = await parseResponse(response);
+  return normalizeOrderPayload(data);
 }
 
 export async function generateInvoiceForOrder(orderId) {

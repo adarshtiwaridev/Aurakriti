@@ -1,14 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
-import { Toaster, toast } from 'sonner';
+import { toast } from 'sonner';
 import AuthLayout from '@/components/AuthLayout';
 import InputField from '@/components/InputField';
 import ButtonLoader from '@/components/ButtonLoader';
@@ -30,30 +30,31 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { register: registerUser, loading } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const googleOAuthUrl = process.env.NEXT_PUBLIC_GOOGLE_OAUTH_URL || '';
-
-  // Get initial role from URL params
-  const getInitialRole = () => {
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      return urlParams.get('seller') === 'true' ? 'seller' : 'user';
-    }
-    return 'user';
-  };
 
   const {
     register,
     handleSubmit,
-    watch,
+    control,
+    setValue,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(registerSchema),
     defaultValues: {
-      role: getInitialRole(),
+      role: 'user',
     },
   });
 
-  const selectedRole = watch('role');
+  const selectedRole = useWatch({
+    control,
+    name: 'role',
+    defaultValue: 'user',
+  });
+
+  useEffect(() => {
+    setValue('role', searchParams.get('seller') === 'true' ? 'seller' : 'user');
+  }, [searchParams, setValue]);
 
   const onSubmit = async (data) => {
     try {
@@ -263,7 +264,6 @@ export default function RegisterPage() {
           </div>
         </div>
       </form>
-      <Toaster position="top-right" />
     </AuthLayout>
   );
 }

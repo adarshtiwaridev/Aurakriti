@@ -36,6 +36,10 @@ export async function POST(request) {
       success: true,
       data: {
         orderId: String(order._id),
+        finalOrderId: String(order._id),
+        checkoutSessionId: null,
+        paymentSessionId: null,
+        razorpayOrderId: null,
         paymentId: null,
         status: order.paymentStatus,
         amounts,

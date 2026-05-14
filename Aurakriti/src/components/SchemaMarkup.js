@@ -1,6 +1,7 @@
-'use client';
+import { headers } from 'next/headers';
 
 export default function SchemaMarkup({ type = 'Organization', data = {} }) {
+  const nonce = headers().get('x-nonce') || undefined;
   let schema = {};
 
   if (type === 'Organization') {
@@ -63,6 +64,7 @@ export default function SchemaMarkup({ type = 'Organization', data = {} }) {
 
   return (
     <script
+      nonce={nonce}
       type="application/ld+json"
       dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
     />

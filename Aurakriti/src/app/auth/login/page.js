@@ -8,7 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
-import { Toaster, toast } from 'sonner';
+import { toast } from 'sonner';
 import AuthLayout from '@/components/AuthLayout';
 import InputField from '@/components/InputField';
 import ButtonLoader from '@/components/ButtonLoader';
@@ -184,7 +184,6 @@ export default function LoginPage() {
           </Link>
         </div>
       </form>
-      <Toaster position="top-right" />
     </AuthLayout>
   );
 }

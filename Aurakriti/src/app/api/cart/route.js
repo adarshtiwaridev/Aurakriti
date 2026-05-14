@@ -11,10 +11,13 @@ void User;
 const buildCartPayload = (cart) => {
   const items = (cart?.items ?? []).map((item) => {
     const product = item.product;
+    const cartItemId = String(item._id);
+    const productId = String(product?._id ?? '');
 
     return {
-      id: String(item._id),
-      productId: String(product?._id),
+      id: cartItemId,
+      cartItemId,
+      productId,
       title: product?.title ?? 'Product',
       price: product?.price ?? 0,
       image: product?.images?.[0] ?? '',
@@ -22,6 +25,8 @@ const buildCartPayload = (cart) => {
       stock: product?.stock ?? 0,
       quantity: item.quantity,
       sellerId: product?.seller?._id ? String(product.seller._id) : String(product?.seller ?? ''),
+      source: 'server',
+      isPersisted: true,
     };
   });
 

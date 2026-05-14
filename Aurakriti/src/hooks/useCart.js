@@ -1,37 +1,97 @@
 import { useSelector, useDispatch } from "react-redux";
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { clearCart, setCart, setCartError, setCartLoading } from "@/redux/slices/cartSlice";
-import { fetchCart } from "@/services/cartService";
+import { addToCart as addToCartRequest, fetchCart } from "@/services/cartService";
 import { useAuth } from "@/hooks/useAuth";
+import { isMongoObjectId } from "@/utils/helpers";
 
 export const useCart = () => {
   const dispatch = useDispatch();
   const { items, loading, error, hydrated } = useSelector((state) => state.cart);
   const { initialized, isAuthenticated, user } = useAuth();
+  const lastSyncedUserIdRef = useRef(null);
+  const mergedGuestItemsForUserRef = useRef(null);
+  const refreshInFlightRef = useRef(null);
+  const itemsRef = useRef(items);
 
   useEffect(() => {
-    if (!initialized || !isAuthenticated || user?.role !== 'user' || hydrated) {
+    itemsRef.current = items;
+  }, [items]);
+
+  const refreshCart = useCallback(async ({ mergeGuestItems = true } = {}) => {
+    const userId = String(user?.id || user?._id || '');
+
+    if (!initialized || !isAuthenticated || user?.role !== 'user' || !userId) {
+      return null;
+    }
+
+    if (refreshInFlightRef.current) {
+      return refreshInFlightRef.current;
+    }
+
+    dispatch(setCartLoading(true));
+
+    const request = (async () => {
+      try {
+        if (mergeGuestItems && mergedGuestItemsForUserRef.current !== userId) {
+          const guestItems = itemsRef.current.filter((item) => item.source === 'local' && isMongoObjectId(item.productId));
+          for (const item of guestItems) {
+            await addToCartRequest(item.productId, item.quantity);
+          }
+          mergedGuestItemsForUserRef.current = userId;
+        }
+
+        const response = await fetchCart();
+        lastSyncedUserIdRef.current = userId;
+        dispatch(setCart(response.items ?? []));
+        return response;
+      } catch (fetchError) {
+        dispatch(setCartError(fetchError.message || 'Failed to load cart'));
+        throw fetchError;
+      } finally {
+        refreshInFlightRef.current = null;
+      }
+    })();
+
+    refreshInFlightRef.current = request;
+    return request;
+  }, [dispatch, initialized, isAuthenticated, user?.id, user?._id, user?.role]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      lastSyncedUserIdRef.current = null;
+      mergedGuestItemsForUserRef.current = null;
+      refreshInFlightRef.current = null;
+      dispatch(setCartLoading(false));
+    }
+  }, [dispatch, isAuthenticated]);
+
+  useEffect(() => {
+    const userId = String(user?.id || user?._id || '');
+
+    if (!initialized || !isAuthenticated || user?.role !== 'user' || !userId) {
+      return;
+    }
+    if (lastSyncedUserIdRef.current === userId && hydrated) {
       return;
     }
 
     let active = true;
 
     const loadCart = async () => {
-      dispatch(setCartLoading(true));
-
       try {
-        const response = await fetchCart();
+        const response = await refreshCart({ mergeGuestItems: true });
         if (!active) {
           return;
         }
 
-        dispatch(setCart(response.items ?? []));
+        if (!response) {
+          dispatch(setCart([]));
+        }
       } catch (fetchError) {
         if (!active) {
           return;
         }
-
-        dispatch(setCartError(fetchError.message || 'Failed to load cart'));
       }
     };
 
@@ -40,7 +100,7 @@ export const useCart = () => {
     return () => {
       active = false;
     };
-  }, [dispatch, hydrated, initialized, isAuthenticated, user?.role]);
+  }, [dispatch, hydrated, initialized, isAuthenticated, refreshCart, user?.id, user?._id, user?.role]);
 
   // Calculate totals using useMemo for performance
   const cartTotals = useMemo(() => {
@@ -69,6 +129,7 @@ export const useCart = () => {
     loading,
     error,
     hydrated,
+    refreshCart,
     clearCartItems: () => dispatch(clearCart()),
   };
 };

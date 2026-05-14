@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { addToCart, setCart } from "@/redux/slices/cartSlice";
 import { addToCart as addToCartRequest } from "@/services/cartService";
+import { getProducts } from "@/services/productService";
 
 const heroSlides = [
   {
@@ -158,22 +159,8 @@ export default function HomePage() {
       setLoadError("");
 
       try {
-        const response = await fetch("/api/products?featured=true", {
-          cache: "no-store",
-        });
-
-        const data = await response.json();
-        if (!response.ok || !data?.success) {
-          throw new Error(data?.message || "Unable to fetch featured products");
-        }
-
-        const items = Array.isArray(data)
-          ? data
-          : Array.isArray(data?.data?.products)
-            ? data.data.products
-            : Array.isArray(data?.products)
-              ? data.products
-              : [];
+        const data = await getProducts({ featured: true });
+        const items = Array.isArray(data?.products) ? data.products : [];
 
         if (isMounted) {
           setProducts(normalizeProducts(items));

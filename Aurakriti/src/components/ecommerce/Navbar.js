@@ -23,11 +23,8 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [mounted, setMounted] = useState(false);
 
-  // Prevent hydration mismatch for dynamic counts
   useEffect(() => {
-    setMounted(true);
     const handler = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", handler);
     return () => window.removeEventListener("scroll", handler);
@@ -44,11 +41,19 @@ export default function Navbar() {
     [isAuthenticated]
   );
 
+  const showGuestActions = initialized ? !isAuthenticated : true;
+
   const handleSearch = (e) => {
     e.preventDefault();
     if (!query.trim()) return;
     router.push(`/shop?search=${encodeURIComponent(query)}`);
     setMenuOpen(false);
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    setMenuOpen(false);
+    router.replace("/auth/login");
   };
 
   return (
@@ -106,7 +111,7 @@ export default function Navbar() {
 
               <Link href="/user/cart" className="icon-btn relative">
                 <CartIcon />
-                {mounted && cartCount > 0 && (
+                {cartCount > 0 && (
                   <span className="absolute -top-2 -right-4 bg-indigo-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                     {cartCount > 9 ? "9+" : cartCount}
                   </span>
@@ -115,18 +120,39 @@ export default function Navbar() {
 
               <div className="hidden md:block h-6 w-[1px] bg-gray-200 mx-2" />
 
-              {initialized && (
-                isAuthenticated ? (
-                  <Link href={dashboardHref} className="hidden md:flex items-center gap-2 group">
-                    <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs uppercase">
-                      {user?.name?.charAt(0)}
-                    </div>
-                  </Link>
-                ) : (
-                  <Link href="/auth/login" className="hidden md:block bg-gray-900 text-white px-5 py-2 rounded-full text-sm font-semibold hover:bg-gray-800 transition">
+              {showGuestActions ? (
+                <div className="hidden md:flex items-center gap-2">
+                  <Link
+                    href="/auth/login"
+                    className="rounded-full border border-gray-200 bg-white px-5 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+                  >
                     Login
                   </Link>
-                )
+                  <Link
+                    href="/auth/register"
+                    className="rounded-full bg-gray-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
+                  >
+                    Signup
+                  </Link>
+                </div>
+              ) : (
+                <div className="hidden md:flex items-center gap-3">
+                  <Link href={dashboardHref} className="flex items-center gap-2 group">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold uppercase text-indigo-700">
+                      {user?.name?.charAt(0) || "U"}
+                    </div>
+                    <span className="max-w-[10rem] truncate text-sm font-semibold text-gray-700">
+                      {user?.name || "My account"}
+                    </span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+                  >
+                    Logout
+                  </button>
+                </div>
               )}
 
               <button className="md:hidden icon-btn" onClick={() => setMenuOpen(!menuOpen)}>
@@ -155,13 +181,39 @@ export default function Navbar() {
                             {link.label}
                         </Link>
                     ))}
-                    {isAuthenticated && (
-                        <button 
-                            onClick={() => { logout(); setMenuOpen(false); }}
-                            className="text-xl font-semibold text-red-500 text-left"
-                        >
-                            Logout
-                        </button>
+                    {showGuestActions ? (
+                        <>
+                          <Link
+                            href="/auth/login"
+                            onClick={() => setMenuOpen(false)}
+                            className="rounded-xl border border-gray-200 px-4 py-3 text-base font-semibold text-gray-800"
+                          >
+                            Login
+                          </Link>
+                          <Link
+                            href="/auth/register"
+                            onClick={() => setMenuOpen(false)}
+                            className="rounded-xl bg-gray-900 px-4 py-3 text-base font-semibold text-white"
+                          >
+                            Signup
+                          </Link>
+                        </>
+                    ) : (
+                        <>
+                          <Link
+                            href={dashboardHref}
+                            onClick={() => setMenuOpen(false)}
+                            className="text-xl font-semibold text-gray-800 border-b pb-2 border-gray-50"
+                          >
+                            My Account
+                          </Link>
+                          <button 
+                              onClick={handleLogout}
+                              className="text-xl font-semibold text-red-500 text-left"
+                          >
+                              Logout
+                          </button>
+                        </>
                     )}
                 </nav>
             </div>

@@ -3,6 +3,7 @@ import axios from 'axios';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BASE_URL || '';
 const TOKEN_STORAGE_KEY = 'ecoCommerceToken';
 const USER_STORAGE_KEY = 'ecoCommerceUser';
+const CSRF_COOKIE_NAME = 'csrfToken';
 
 const trimTrailingSlash = (value = '') => String(value).replace(/\/$/, '');
 
@@ -34,6 +35,16 @@ const resolveApiBaseUrl = () => {
   return configured;
 };
 
+const getCookieValue = (name) => {
+  if (typeof document === 'undefined') {
+    return '';
+  }
+
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = document.cookie.match(new RegExp(`(?:^|; )${escapedName}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : '';
+};
+
 class AuthService {
   constructor() {
     this.api = axios.create({
@@ -51,6 +62,17 @@ class AuthService {
           ...(config.headers || {}),
           Authorization: `Bearer ${token}`,
         };
+      }
+
+      const method = String(config.method || 'get').toUpperCase();
+      if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+        const csrfToken = getCookieValue(CSRF_COOKIE_NAME);
+        if (csrfToken) {
+          config.headers = {
+            ...(config.headers || {}),
+            'x-csrf-token': csrfToken,
+          };
+        }
       }
       return config;
     });

@@ -1,4 +1,5 @@
 import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
+import { headers } from "next/headers";
 import { Providers } from "./providers";
 import Navbar from "../components/ecommerce/Navbar";
 import Footer from "@/components/Footer";
@@ -78,7 +79,10 @@ export const viewport = {
 };
 
 /* ── Root Layout ────────────────────────────────────────────── */
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+const headerList = await headers();
+  const nonce = headerList.get("x-nonce") || undefined;
+
   return (
     <html
       lang="en"
@@ -86,6 +90,7 @@ export default function RootLayout({ children }) {
       className={`${geist.variable} ${geistMono.variable} ${playfairDisplay.variable}`}
     >
       <head>
+        <meta name="csp-nonce" content={nonce} />
         <link rel="preconnect" href="https://res.cloudinary.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://images.unsplash.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://raw.githubusercontent.com" crossOrigin="anonymous" />

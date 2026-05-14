@@ -5,6 +5,7 @@ import { mapProductDocument } from '@/lib/product-utils';
 
 export const SHIPPING_THRESHOLD = 1000;
 export const STANDARD_SHIPPING = 50;
+const MONGO_ID_PATTERN = /^[a-f\d]{24}$/i;
 
 export const mapOrder = (order, currentUser) => {
   const items = (order.items ?? [])
@@ -90,7 +91,6 @@ export const orderPopulateConfig = [
 
 export async function buildOrderDataFromCart({ userId, shippingAddress = {} }) {
   const cart = await loadCartForOrder(userId);
-    console.log("CART DATA:", cart);
   if (!cart || cart.items.length === 0) {
     throw new Error('Your cart is empty.');
   }
@@ -217,4 +217,8 @@ export async function finalizeOrderPayment({ order, payment = {}, verificationMo
   await Cart.findOneAndUpdate({ user: order.user }, { $set: { items: [] } });
 
   return Order.findById(order._id).populate(orderPopulateConfig);
+}
+
+export function isMongoObjectId(value) {
+  return MONGO_ID_PATTERN.test(String(value || ''));
 }

@@ -1,266 +1,262 @@
-'use client';
+  'use client';
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
-import { useDispatch } from 'react-redux';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import ProductCard from '@/components/ProductCard';
-import LoadingSkeleton from '@/components/ecommerce/LoadingSkeleton';
-import { useCart } from '@/hooks/useCart';
-import { addToCart, setCart } from '@/redux/slices/cartSlice';
-import { addToCart as addToCartRequest } from '@/services/cartService';
-import { useAuth } from '@/hooks/useAuth';
-import { Search, Filter, X } from 'lucide-react';
+  import { useEffect, useMemo, useState, useCallback } from 'react';
+  import { useDispatch } from 'react-redux';
+  import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+  import ProductCard from '@/components/ProductCard';
+  import LoadingSkeleton from '@/components/ecommerce/LoadingSkeleton';
+  import { useCart } from '@/hooks/useCart';
+  import { addToCart, setCart } from '@/redux/slices/cartSlice';
+  import { addToCart as addToCartRequest } from '@/services/cartService';
+  import { useAuth } from '@/hooks/useAuth';
+  import { getProducts } from '@/services/productService';
+  import { Search, Filter, X } from 'lucide-react';
 
-export default function ShopPage() {
-  const router = useRouter();
-  const dispatch = useDispatch();
-  const { items: cartItems } = useCart();
-  const { isAuthenticated, user, initialized } = useAuth();
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
+  export default function ShopPage() {
+    const router = useRouter();
+    const dispatch = useDispatch();
+    const { items: cartItems } = useCart();
+    const { isAuthenticated, user, initialized } = useAuth();
+    const searchParams = useSearchParams();
+    const pathname = usePathname();
 
-  // States
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState(['All']);
-  const [activeCategory, setActiveCategory] = useState(searchParams.get('category') || 'All');
-  const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [toastMessage, setToastMessage] = useState('');
-  const [sortBy, setSortBy] = useState(searchParams.get('sortBy') || 'newest');
-  const [showSidebar, setShowSidebar] = useState(false);
+    // States
+    const [products, setProducts] = useState([]);
+    const [categories, setCategories] = useState(['All']);
+    const [activeCategory, setActiveCategory] = useState(searchParams.get('category') || 'All');
+    const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [toastMessage, setToastMessage] = useState('');
+    const [sortBy, setSortBy] = useState(searchParams.get('sortBy') || 'newest');
+    const [showSidebar, setShowSidebar] = useState(false);
 
-  // Helper to update URL params
-  const updateFilters = useCallback((name, value) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (value && value !== 'All' && value !== '' && value !== false) {
-      params.set(name, String(value));
-    } else {
-      params.delete(name);
-    }
-    // Reset to page 1 if filtering
-    if (name !== 'page') params.delete('page'); 
-    
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  }, [searchParams, pathname, router]);
-
-  // Handle Search Debounce
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchTerm !== (searchParams.get('search') || '')) {
-        updateFilters('search', searchTerm);
+    // Helper to update URL params
+    const updateFilters = useCallback((name, value) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (value && value !== 'All' && value !== '' && value !== false) {
+        params.set(name, String(value));
+      } else {
+        params.delete(name);
       }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchTerm, updateFilters, searchParams]);
+      // Reset to page 1 if filtering
+      if (name !== 'page') params.delete('page'); 
+      
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    }, [searchParams, pathname, router]);
 
-  // Fetch products when URL params change
-  useEffect(() => {
-    let isMounted = true;
-    const fetchProducts = async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const response = await fetch(`/api/products?${searchParams.toString()}`, {
-          credentials: 'include'
-        });
-        const payload = await response.json();
+    useEffect(() => {
+      setActiveCategory(searchParams.get('category') || 'All');
+      setSearchTerm(searchParams.get('search') || '');
+      setSortBy(searchParams.get('sortBy') || 'newest');
+    }, [searchParams]);
 
-        if (isMounted) {
-          if (!response.ok || !payload.success) {
+    // Handle Search Debounce
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        if (searchTerm !== (searchParams.get('search') || '')) {
+          updateFilters('search', searchTerm);
+        }
+      }, 500);
+      return () => clearTimeout(timer);
+    }, [searchTerm, updateFilters, searchParams]);
+
+    // Fetch products when URL params change
+    useEffect(() => {
+      let isMounted = true;
+      const fetchProducts = async () => {
+        setLoading(true);
+        setError('');
+        try {
+          const payload = await getProducts(Object.fromEntries(searchParams.entries()));
+
+          if (isMounted) {
+            setProducts(payload.products || []);
+            if (payload.categories) {
+              setCategories(['All', ...payload.categories]);
+            }
+          }
+        } catch (error) {
+          if (isMounted) {
             setProducts([]);
             setCategories(['All']);
-            setError(payload.message || 'Failed to load products.');
-            return;
+            setError(error.message || 'Failed to load products. Please try again.');
           }
-
-          setProducts(payload.data.products || []);
-          if (payload.data.categories) {
-            setCategories(['All', ...payload.data.categories]);
-          }
+        } finally {
+          if (isMounted) setLoading(false);
         }
+      };
+
+      fetchProducts();
+      return () => { isMounted = false; };
+    }, [searchParams]);
+
+    // Memoized calculations
+    const categoryCounts = useMemo(() => {
+      const counts = { All: products.length };
+      products.forEach(p => {
+        if (p.category) counts[p.category] = (counts[p.category] || 0) + 1;
+      });
+      return counts;
+    }, [products]);
+
+    const handleAddToCart = useCallback(async (product) => {
+      if (!initialized) return;
+
+      if (isAuthenticated && user?.role !== 'user') {
+        setToastMessage('Seller accounts cannot buy products.');
+        setTimeout(() => setToastMessage(''), 2200);
+        return;
+      }
+
+      try {
+        if (!isAuthenticated) {
+          dispatch(addToCart({
+            id: product._id || product.id,
+            productId: product._id || product.id,
+            title: product.title || product.name,
+            price: Number(product.price || 0),
+            image: product.images?.[0] || product.image || '',
+            category: product.category || '',
+            quantity: 1,
+          }));
+        } else {
+          const cart = await addToCartRequest(product._id || product.id, 1);
+          dispatch(setCart(cart.items ?? []));
+        }
+        setToastMessage(`${product.title || product.name} added to cart`);
       } catch (error) {
-        console.error('Failed to load products:', error);
-        if (isMounted) {
-          setProducts([]);
-          setCategories(['All']);
-          setError('Failed to load products. Please try again.');
-        }
-      } finally {
-        if (isMounted) setLoading(false);
+        setToastMessage(error.message || 'Failed to add to cart');
       }
-    };
-
-    fetchProducts();
-    return () => { isMounted = false; };
-  }, [searchParams]);
-
-  // Memoized calculations
-  const categoryCounts = useMemo(() => {
-    const counts = { All: products.length };
-    products.forEach(p => {
-      if (p.category) counts[p.category] = (counts[p.category] || 0) + 1;
-    });
-    return counts;
-  }, [products]);
-
-  const handleAddToCart = useCallback(async (product) => {
-    if (!initialized) return;
-
-    if (isAuthenticated && user?.role !== 'user') {
-      setToastMessage('Seller accounts cannot buy products.');
       setTimeout(() => setToastMessage(''), 2200);
-      return;
-    }
+    }, [dispatch, initialized, isAuthenticated, user]);
 
-    try {
-      if (!isAuthenticated) {
-        dispatch(addToCart({
-          id: product._id || product.id,
-          productId: product._id || product.id,
-          title: product.title || product.name,
-          price: Number(product.price || 0),
-          image: product.images?.[0] || product.image || '',
-          category: product.category || '',
-          quantity: 1,
-        }));
-      } else {
-        const cart = await addToCartRequest(product._id || product.id, 1);
-        dispatch(setCart(cart.items ?? []));
-      }
-      setToastMessage(`${product.title || product.name} added to cart`);
-    } catch (error) {
-      setToastMessage(error.message || 'Failed to add to cart');
-    }
-    setTimeout(() => setToastMessage(''), 2200);
-  }, [dispatch, initialized, isAuthenticated, user]);
-
-  return (
-    <div className="min-h-screen bg-[#f8fafb] text-slate-900">
-      <main className="pb-20">
-        <div className="border-b border-slate-200 bg-white shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <h1 className="text-4xl font-black text-slate-900">Shop</h1>
-            <p className="mt-2 text-slate-600">Explore our handcrafted collection of premium jewellery</p>
-          </div>
-        </div>
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex gap-6 lg:gap-8">
-            {/* Sidebar */}
-            <aside className={`fixed inset-y-0 left-0 top-0 z-50 w-64 border-r border-slate-200 bg-white overflow-y-auto p-6 transition-transform duration-300 lg:relative lg:translate-x-0 ${
-              showSidebar ? 'translate-x-0' : '-translate-x-full'
-            }`}>
-              <div className="flex items-center justify-between mb-6 lg:hidden">
-                <h2 className="text-lg font-bold">Filters</h2>
-                <button onClick={() => setShowSidebar(false)}><X size={20} /></button>
-              </div>
-
-              <div className="mb-8">
-                <h3 className="text-sm font-black uppercase tracking-widest text-slate-700 mb-4">Categories</h3>
-                <div className="space-y-1">
-                  {categories.map(cat => (
-                    <button
-                      key={cat}
-                      onClick={() => {
-                        setActiveCategory(cat);
-                        updateFilters('category', cat);
-                        setShowSidebar(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-4 py-2 rounded-lg font-semibold transition ${
-                        activeCategory === cat ? 'bg-green-600 text-white' : 'hover:bg-slate-100'
-                      }`}
-                    >
-                      <span>{cat}</span>
-                      <span className="text-xs opacity-70">{categoryCounts[cat] || 0}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-black uppercase tracking-widest text-slate-700 mb-4">Sort By</h3>
-                <select
-                  value={sortBy}
-                  onChange={(e) => {
-                    setSortBy(e.target.value);
-                    updateFilters('sortBy', e.target.value);
-                  }}
-                  className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                >
-                  <option value="newest">Newest</option>
-                  <option value="price-low">Price: Low to High</option>
-                  <option value="price-high">Price: High to Low</option>
-                  <option value="rating">Highest Rating</option>
-                </select>
-              </div>
-            </aside>
-
-            {/* Content Area */}
-            <div className="flex-1">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="relative flex-1">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                  <input
-                    type="text"
-                    placeholder="Search products..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
-                  />
-                </div>
-                <button 
-                  onClick={() => setShowSidebar(true)}
-                  className="lg:hidden flex items-center gap-2 px-4 py-3 border border-slate-200 rounded-lg font-semibold"
-                >
-                  <Filter size={20} />
-                </button>
-              </div>
-
-              <div className="mb-6 text-sm text-slate-600">
-                Showing {products.length} product{products.length !== 1 ? 's' : ''} 
-                {activeCategory !== 'All' && ` in ${activeCategory}`}
-              </div>
-
-              {error ? (
-                <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-                  {error}
-                </div>
-              ) : null}
-
-              {loading ? (
-                <LoadingSkeleton />
-              ) : products.length === 0 ? (
-                <div className="rounded-3xl border-2 border-dashed border-slate-200 p-16 text-center">
-                  <p className="text-lg font-bold">No products found</p>
-                  <button 
-                    onClick={() => {setSearchTerm(''); updateFilters('search', '');}} 
-                    className="mt-4 text-green-600 underline"
-                  >
-                    Clear all filters
-                  </button>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {products.map(product => (
-                    <ProductCard 
-                      key={product._id || product.id} 
-                      product={product} 
-                      onAddToCart={handleAddToCart}
-                    />
-                  ))}
-                </div>
-              )}
+    return (
+      <div className="min-h-screen bg-[#f8fafb] text-slate-900">
+        <main className="pb-20">
+          <div className="border-b border-slate-200 bg-white shadow-sm">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              <h1 className="text-4xl font-black text-slate-900">Shop</h1>
+              <p className="mt-2 text-slate-600">Explore our handcrafted collection of premium jewellery</p>
             </div>
           </div>
-        </div>
-      </main>
 
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-green-600 text-white px-6 py-3 rounded-lg shadow-xl font-semibold animate-in fade-in slide-in-from-bottom-4">
-          {toastMessage}
-        </div>
-      )}
-    </div>
-  );
-}
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="flex gap-6 lg:gap-8">
+              {/* Sidebar */}
+              <aside className={`fixed inset-y-0 left-0 top-0 z-50 w-64 border-r border-slate-200 bg-white overflow-y-auto p-6 transition-transform duration-300 lg:relative lg:translate-x-0 ${
+                showSidebar ? 'translate-x-0' : '-translate-x-full'
+              }`}>
+                <div className="flex items-center justify-between mb-6 lg:hidden">
+                  <h2 className="text-lg font-bold">Filters</h2>
+                  <button onClick={() => setShowSidebar(false)}><X size={20} /></button>
+                </div>
+
+                <div className="mb-8">
+                  <h3 className="text-sm font-black uppercase tracking-widest text-slate-700 mb-4">Categories</h3>
+                  <div className="space-y-1">
+                    {categories.map(cat => (
+                      <button
+                        key={cat}
+                        onClick={() => {
+                          setActiveCategory(cat);
+                          updateFilters('category', cat);
+                          setShowSidebar(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-4 py-2 rounded-lg font-semibold transition ${
+                          activeCategory === cat ? 'bg-green-600 text-white' : 'hover:bg-slate-100'
+                        }`}
+                      >
+                        <span>{cat}</span>
+                        <span className="text-xs opacity-70">{categoryCounts[cat] || 0}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-widest text-slate-700 mb-4">Sort By</h3>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => {
+                      setSortBy(e.target.value);
+                      updateFilters('sortBy', e.target.value);
+                    }}
+                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                  >
+                    <option value="newest">Newest</option>
+                    <option value="price-low">Price: Low to High</option>
+                    <option value="price-high">Price: High to Low</option>
+                    <option value="rating">Highest Rating</option>
+                  </select>
+                </div>
+              </aside>
+
+              {/* Content Area */}
+              <div className="flex-1">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                    <input
+                      type="text"
+                      placeholder="Search products..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 outline-none"
+                    />
+                  </div>
+                  <button 
+                    onClick={() => setShowSidebar(true)}
+                    className="lg:hidden flex items-center gap-2 px-4 py-3 border border-slate-200 rounded-lg font-semibold"
+                  >
+                    <Filter size={20} />
+                  </button>
+                </div>
+
+                <div className="mb-6 text-sm text-slate-600">
+                  Showing {products.length} product{products.length !== 1 ? 's' : ''} 
+                  {activeCategory !== 'All' && ` in ${activeCategory}`}
+                </div>
+
+                {error ? (
+                  <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                    {error}
+                  </div>
+                ) : null}
+
+                {loading ? (
+                  <LoadingSkeleton />
+                ) : products.length === 0 ? (
+                  <div className="rounded-3xl border-2 border-dashed border-slate-200 p-16 text-center">
+                    <p className="text-lg font-bold">No products found</p>
+                    <button 
+                      onClick={() => {setSearchTerm(''); updateFilters('search', '');}} 
+                      className="mt-4 text-green-600 underline"
+                    >
+                      Clear all filters
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {products.map(product => (
+                      <ProductCard 
+                        key={product._id || product.id} 
+                        product={product} 
+                        onAddToCart={handleAddToCart}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </main>
+
+        {toastMessage && (
+          <div className="fixed bottom-6 right-6 z-50 bg-green-600 text-white px-6 py-3 rounded-lg shadow-xl font-semibold animate-in fade-in slide-in-from-bottom-4">
+            {toastMessage}
+          </div>
+        )}
+      </div>
+    );
+  }
