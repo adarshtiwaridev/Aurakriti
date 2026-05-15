@@ -4,8 +4,11 @@ import mongoose from 'mongoose';
 import connectDB from '@/lib/db';
 import { PRODUCT_CATEGORIES } from '@/lib/catalog';
 import { requireAuth, requireRole } from '@/lib/api-auth';
+import { uploadBufferToCloudinary } from '@/lib/cloudinary';
 import { mapProductDocument } from '@/lib/product-utils';
 import Product from '@/models/Product';
+
+export const runtime = 'nodejs';
 
 const productUpdateSchema = z.object({
   title: z.string().trim().min(2).optional(),
@@ -18,6 +21,106 @@ const productUpdateSchema = z.object({
   isActive: z.boolean().optional(),
   isFeatured: z.boolean().optional(),
 });
+
+function parseBoolean(value) {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+  }
+  return undefined;
+}
+
+function parseStringArray(value) {
+  if (Array.isArray(value)) {
+    return value
+      .filter((entry) => typeof entry === 'string')
+      .map((entry) => String(entry).trim())
+      .filter(Boolean);
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed.map((entry) => String(entry).trim()).filter(Boolean);
+      }
+    } catch {
+      return trimmed
+        .split(',')
+        .map((entry) => entry.trim())
+        .filter(Boolean);
+    }
+  }
+
+  return [];
+}
+
+async function uploadProductFiles(formData) {
+  const incomingFiles = formData.getAll('images').filter((entry) => entry instanceof File && entry.size > 0);
+  const uploadedImages = [];
+
+  for (const file of incomingFiles) {
+    if (!file.type.startsWith('image/')) {
+      throw new Error('Only image files are allowed.');
+    }
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const result = await uploadBufferToCloudinary(buffer, {
+      folder: 'eco-commerce/products',
+      public_id: `product-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    });
+
+    uploadedImages.push(result.secure_url);
+  }
+
+  return uploadedImages;
+}
+
+async function parseProductUpdatePayload(request) {
+  const contentType = request.headers.get('content-type') ?? '';
+
+  if (!contentType.includes('multipart/form-data')) {
+    return request.json();
+  }
+
+  const formData = await request.formData();
+  const payload = {
+    title: formData.get('title') ?? undefined,
+    description: formData.get('description') ?? undefined,
+    price: formData.get('price') ?? undefined,
+    category: formData.get('category') ?? undefined,
+    stock: formData.get('stock') ?? undefined,
+  };
+
+  if (formData.has('tags')) {
+    payload.tags = parseStringArray(formData.getAll('tags'));
+  }
+
+  if (formData.has('images') || formData.has('existingImages')) {
+    payload.images = [
+      ...parseStringArray(formData.getAll('existingImages')),
+      ...parseStringArray(formData.getAll('images')),
+      ...(await uploadProductFiles(formData)),
+    ];
+  }
+
+  const isActive = parseBoolean(formData.get('isActive'));
+  const isFeatured = parseBoolean(formData.get('isFeatured'));
+
+  if (typeof isActive === 'boolean') {
+    payload.isActive = isActive;
+  }
+
+  if (typeof isFeatured === 'boolean') {
+    payload.isFeatured = isFeatured;
+  }
+
+  return payload;
+}
 
 export async function GET(request, context) {
   const { id } = await context.params;
@@ -80,7 +183,7 @@ export async function PATCH(request, context) {
 
   try {
     await connectDB();
-    const body = await request.json();
+    const body = await parseProductUpdatePayload(request);
     const parsed = productUpdateSchema.safeParse(body);
 
     if (!parsed.success) {

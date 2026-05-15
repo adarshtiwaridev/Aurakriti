@@ -1,3 +1,4 @@
+import { authorizedFetch, authorizedJsonFetch } from '@/services/http';
 async function parseResponse(response) {
   const payload = await response.json();
 
@@ -9,8 +10,7 @@ async function parseResponse(response) {
 }
 
 export async function getProfile() {
-  const response = await fetch('/api/auth/profile', {
-    credentials: 'include',
+  const response = await authorizedFetch('/api/auth/profile', {
     cache: 'no-store',
   });
 
@@ -18,8 +18,7 @@ export async function getProfile() {
 }
 
 export async function getDashboardProfile() {
-  const response = await fetch('/api/user/profile', {
-    credentials: 'include',
+  const response = await authorizedFetch('/api/user/profile', {
     cache: 'no-store',
   });
 
@@ -27,30 +26,44 @@ export async function getDashboardProfile() {
 }
 
 export async function updateProfile(payload) {
-  const response = await fetch('/api/auth/profile', {
+  const response = await authorizedJsonFetch('/api/auth/profile', {
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
     body: JSON.stringify(payload),
   });
 
   return parseResponse(response);
 }
 
-export async function uploadImages(files, folder = 'products') {
-  const formData = new FormData();
-  for (const file of files) {
-    formData.append('files', file);
-  }
-  formData.append('folder', folder);
+export const uploadImages = async (files, folder) => {
+  const token = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith("token="))
+    ?.split("=")[1];
 
-  const response = await fetch('/api/upload/images', {
-    method: 'POST',
-    credentials: 'include',
-    body: formData,
+  console.log("TOKEN:", token);
+
+  const formData = new FormData();
+
+  files.forEach((file) => {
+    formData.append("files", file);
   });
 
-  return parseResponse(response);
-}
+  formData.append("folder", folder);
+
+  const response = await fetch("/api/upload/images", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+    credentials: "include",
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Upload failed");
+  }
+
+  return data.data;
+};

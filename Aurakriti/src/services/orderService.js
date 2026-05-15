@@ -1,3 +1,5 @@
+import { authorizedFetch, authorizedJsonFetch } from '@/services/http';
+
 async function parseResponse(response) {
   let payload = {};
 
@@ -35,8 +37,7 @@ function normalizeOrderPayload(data) {
 
 export async function getOrders(view) {
   const query = view ? `?view=${encodeURIComponent(view)}` : '';
-  const response = await fetch(`/api/orders${query}`, {
-    credentials: 'include',
+  const response = await authorizedFetch(`/api/orders${query}`, {
     cache: 'no-store',
   });
 
@@ -45,12 +46,8 @@ export async function getOrders(view) {
 }
 
 export async function updateOrderStatus(orderId, status, itemId, trackingDetails) {
-  const response = await fetch(`/api/orders/${orderId}`, {
+  const response = await authorizedJsonFetch(`/api/orders/${orderId}`, {
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
     body: JSON.stringify({ status, itemId, trackingDetails }),
   });
 
@@ -59,8 +56,7 @@ export async function updateOrderStatus(orderId, status, itemId, trackingDetails
 }
 
 export async function getOrderById(orderId) {
-  const response = await fetch(`/api/orders/${orderId}`, {
-    credentials: 'include',
+  const response = await authorizedFetch(`/api/orders/${orderId}`, {
     cache: 'no-store',
   });
 
@@ -69,12 +65,8 @@ export async function getOrderById(orderId) {
 }
 
 export async function generateInvoiceForOrder(orderId) {
-  const response = await fetch('/api/invoice/generate', {
+  const response = await authorizedJsonFetch('/api/invoice/generate', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
     body: JSON.stringify({ orderId }),
   });
 

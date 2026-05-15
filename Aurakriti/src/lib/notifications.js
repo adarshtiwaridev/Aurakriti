@@ -20,6 +20,11 @@ export async function notifySellersForNewOrder(order, user) {
   const docs = [];
   for (const [sellerId, sellerItems] of sellerMap.entries()) {
     const itemNames = sellerItems.map((it) => it.title).slice(0, 3).join(', ');
+    const sellerSubtotal = sellerItems.reduce(
+      (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0),
+      0
+    );
+
     docs.push({
       sellerId,
       type: 'order',
@@ -29,10 +34,28 @@ export async function notifySellersForNewOrder(order, user) {
       productId: sellerItems[0]?.product ?? null,
       metadata: {
         orderId: String(order._id),
+        orderCode: shortOrderCode(order._id),
+        customerName: user?.name || '',
+        customerEmail: user?.email || '',
+        customerPhone: order?.shippingAddress?.contact || '',
+        shippingAddress: order?.shippingAddress || {},
         productName: sellerItems[0]?.title || '',
+        products: sellerItems.map((item) => ({
+          productId: String(item.product?._id ?? item.product ?? ''),
+          title: item.title || '',
+          quantity: Number(item.quantity || 0),
+          price: Number(item.price || 0),
+          total: Number(item.price || 0) * Number(item.quantity || 0),
+          image: item.image || '',
+          category: item.category || '',
+          status: item.status || 'confirmed',
+        })),
         userName: user?.name || '',
         userEmail: user?.email || '',
         itemCount: sellerItems.length,
+        sellerAmount: sellerSubtotal,
+        totalAmount: Number(order?.totalAmount || 0),
+        paymentStatus: order?.paymentStatus || 'created',
         time: new Date().toISOString(),
       },
     });

@@ -3,8 +3,11 @@ import { z } from 'zod';
 import connectDB from '@/lib/db';
 import { PRODUCT_CATEGORIES } from '@/lib/catalog';
 import { requireAuth, requireRole } from '@/lib/api-auth';
+import { uploadBufferToCloudinary } from '@/lib/cloudinary';
 import { mapProductDocument } from '@/lib/product-utils';
 import Product from '@/models/Product';
+
+export const runtime = 'nodejs';
 
 const productSchema = z.object({
   title: z.string().trim().min(2),
@@ -17,6 +20,100 @@ const productSchema = z.object({
   isFeatured: z.boolean().optional(),
   isActive: z.boolean().optional(),
 });
+
+function parseBoolean(value) {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+  }
+  return undefined;
+}
+
+function parseStringArray(value) {
+  if (Array.isArray(value)) {
+    return value
+      .filter((entry) => typeof entry === 'string')
+      .map((entry) => String(entry).trim())
+      .filter(Boolean);
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return parsed.map((entry) => String(entry).trim()).filter(Boolean);
+      }
+    } catch {
+      return trimmed
+        .split(',')
+        .map((entry) => entry.trim())
+        .filter(Boolean);
+    }
+  }
+
+  return [];
+}
+
+async function uploadProductFiles(formData) {
+  const incomingFiles = formData.getAll('images').filter((entry) => entry instanceof File && entry.size > 0);
+  const uploadedImages = [];
+
+  for (const file of incomingFiles) {
+    if (!file.type.startsWith('image/')) {
+      throw new Error('Only image files are allowed.');
+    }
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const result = await uploadBufferToCloudinary(buffer, {
+      folder: 'eco-commerce/products',
+      public_id: `product-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    });
+
+    uploadedImages.push(result.secure_url);
+  }
+
+  return uploadedImages;
+}
+
+async function parseProductPayload(request) {
+  const contentType = request.headers.get('content-type') ?? '';
+
+  if (!contentType.includes('multipart/form-data')) {
+    return request.json();
+  }
+
+  const formData = await request.formData();
+  const payload = {
+    title: String(formData.get('title') || '').trim(),
+    description: String(formData.get('description') || '').trim(),
+    price: formData.get('price'),
+    category: String(formData.get('category') || '').trim(),
+    stock: formData.get('stock'),
+    tags: parseStringArray(formData.getAll('tags')),
+    images: [
+      ...parseStringArray(formData.getAll('existingImages')),
+      ...parseStringArray(formData.getAll('images')),
+      ...(await uploadProductFiles(formData)),
+    ],
+  };
+
+  const isFeatured = parseBoolean(formData.get('isFeatured'));
+  const isActive = parseBoolean(formData.get('isActive'));
+
+  if (typeof isFeatured === 'boolean') {
+    payload.isFeatured = isFeatured;
+  }
+
+  if (typeof isActive === 'boolean') {
+    payload.isActive = isActive;
+  }
+
+  return payload;
+}
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -173,7 +270,7 @@ export async function POST(request) {
 
   try {
     await connectDB();
-    const body = await request.json();
+    const body = await parseProductPayload(request);
     const parsed = productSchema.safeParse(body);
 
     if (!parsed.success) {

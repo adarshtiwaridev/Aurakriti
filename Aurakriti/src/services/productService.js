@@ -1,3 +1,5 @@
+import { authorizedFetch, authorizedJsonFetch } from '@/services/http';
+
 const buildQuery = (params = {}) => {
   const searchParams = new URLSearchParams();
 
@@ -22,8 +24,7 @@ async function parseResponse(response) {
 
 export async function getProducts(params = {}) {
   const query = buildQuery(params);
-  const response = await fetch(`/api/products${query ? `?${query}` : ''}`, {
-    credentials: 'include',
+  const response = await authorizedFetch(`/api/products${query ? `?${query}` : ''}`, {
     cache: 'no-store',
   });
 
@@ -31,8 +32,7 @@ export async function getProducts(params = {}) {
 }
 
 export async function getProduct(id) {
-  const response = await fetch(`/api/products/${id}`, {
-    credentials: 'include',
+  const response = await authorizedFetch(`/api/products/${id}`, {
     cache: 'no-store',
   });
 
@@ -40,47 +40,46 @@ export async function getProduct(id) {
 }
 
 export async function createProduct(product) {
-  const response = await fetch('/api/products', {
+  const isFormData = typeof FormData !== 'undefined' && product instanceof FormData;
+  const response = await (isFormData
+    ? authorizedFetch('/api/products', {
+        method: 'POST',
+        body: product,
+      })
+    : authorizedJsonFetch('/api/products', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
     body: JSON.stringify(product),
-  });
+      }));
 
   return parseResponse(response);
 }
 
 export async function updateProduct(id, product) {
-  const response = await fetch(`/api/products/${id}`, {
+  const isFormData = typeof FormData !== 'undefined' && product instanceof FormData;
+  const response = await (isFormData
+    ? authorizedFetch(`/api/products/${id}`, {
+        method: 'PATCH',
+        body: product,
+      })
+    : authorizedJsonFetch(`/api/products/${id}`, {
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
     body: JSON.stringify(product),
-  });
+      }));
 
   return parseResponse(response);
 }
 
 export async function deleteProduct(id) {
-  const response = await fetch(`/api/products/${id}`, {
+  const response = await authorizedFetch(`/api/products/${id}`, {
     method: 'DELETE',
-    credentials: 'include',
   });
 
   return parseResponse(response);
 }
 
 export async function createReview(productId, review) {
-  const response = await fetch(`/api/products/${productId}/reviews`, {
+  const response = await authorizedJsonFetch(`/api/products/${productId}/reviews`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
     body: JSON.stringify(review),
   });
 
@@ -88,12 +87,8 @@ export async function createReview(productId, review) {
 }
 
 export async function updateReview(productId, reviewId, review) {
-  const response = await fetch(`/api/products/${productId}/reviews`, {
+  const response = await authorizedJsonFetch(`/api/products/${productId}/reviews`, {
     method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
     body: JSON.stringify({ reviewId, ...review }),
   });
 
@@ -101,9 +96,8 @@ export async function updateReview(productId, reviewId, review) {
 }
 
 export async function deleteReview(productId, reviewId) {
-  const response = await fetch(`/api/products/${productId}/reviews?reviewId=${encodeURIComponent(reviewId)}`, {
+  const response = await authorizedFetch(`/api/products/${productId}/reviews?reviewId=${encodeURIComponent(reviewId)}`, {
     method: 'DELETE',
-    credentials: 'include',
   });
 
   return parseResponse(response);

@@ -6,6 +6,7 @@ import Order from '@/models/Order';
 import { finalizeOrderPayment, mapOrder } from '@/lib/order-utils';
 import { generateAndStoreInvoice } from '@/lib/invoice';
 import { sendOrderConfirmationEmail } from '@/lib/email';
+import { notifySellersForNewOrder } from '@/lib/notifications';
 
 export const runtime = 'nodejs';
 
@@ -75,6 +76,9 @@ export async function POST(request) {
 
     sendOrderConfirmationEmail(finalizedOrder, auth.user).catch((error) =>
       console.error('[Order/Confirm] Confirmation email error:', error.message)
+    );
+    notifySellersForNewOrder(finalizedOrder, auth.user).catch((error) =>
+      console.error('[Order/Confirm] Seller notification error:', error.message)
     );
 
     return NextResponse.json({

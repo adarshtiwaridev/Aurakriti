@@ -1,3 +1,5 @@
+import { authorizedFetch } from '@/services/http';
+
 async function parseResponse(response) {
   const payload = await response.json();
   if (!response.ok || !payload.success) {
@@ -11,8 +13,7 @@ export async function getNotifications({ unreadOnly = false, limit = 20 } = {}) 
   if (unreadOnly) query.set('unreadOnly', 'true');
   if (limit) query.set('limit', String(limit));
 
-  const response = await fetch(`/api/notifications${query.toString() ? `?${query.toString()}` : ''}`, {
-    credentials: 'include',
+  const response = await authorizedFetch(`/api/notifications${query.toString() ? `?${query.toString()}` : ''}`, {
     cache: 'no-store',
   });
 
@@ -20,18 +21,16 @@ export async function getNotifications({ unreadOnly = false, limit = 20 } = {}) 
 }
 
 export async function markNotificationRead(id) {
-  const response = await fetch(`/api/notifications/${id}/read`, {
+  const response = await authorizedFetch(`/api/notifications/${id}/read`, {
     method: 'PATCH',
-    credentials: 'include',
   });
 
   return parseResponse(response);
 }
 
 export async function markAllNotificationsRead() {
-  const response = await fetch('/api/notifications/read-all', {
+  const response = await authorizedFetch('/api/notifications/read-all', {
     method: 'PATCH',
-    credentials: 'include',
   });
 
   return parseResponse(response);

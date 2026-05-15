@@ -5,6 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useCart } from "@/hooks/useCart";
+import { getNotifications, markAllNotificationsRead, markNotificationRead } from "@/services/notificationService";
+import { toast } from "sonner";
 
 const NAV_LINKS = [
   { label: "Home", href: "/" },
@@ -23,12 +25,42 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", handler);
     return () => window.removeEventListener("scroll", handler);
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated || typeof window === "undefined") {
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadNotifications = async () => {
+      try {
+        const data = await getNotifications({ limit: 8 });
+        if (!isMounted) return;
+        setNotifications(data.notifications || []);
+        setUnreadCount(Number(data.unreadCount || 0));
+      } catch {
+        if (!isMounted) return;
+      }
+    };
+
+    loadNotifications();
+    const timer = window.setInterval(loadNotifications, 10000);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(timer);
+    };
+  }, [isAuthenticated]);
 
   const dashboardHref = useMemo(() => {
     if (user?.role === "seller") return "/seller/dashboard";
@@ -53,7 +85,49 @@ export default function Navbar() {
   const handleLogout = async () => {
     await logout();
     setMenuOpen(false);
+    setNotificationOpen(false);
     router.replace("/auth/login");
+  };
+
+  const openNotification = async (notification) => {
+    try {
+      if (!notification.isRead) {
+        await markNotificationRead(notification.id);
+        setNotifications((prev) =>
+          prev.map((entry) => (entry.id === notification.id ? { ...entry, isRead: true } : entry))
+        );
+        setUnreadCount((prev) => Math.max(0, prev - 1));
+      }
+
+      setNotificationOpen(false);
+
+      if (notification.orderId) {
+        if (user?.role === "seller") {
+          router.push("/seller/dashboard");
+          return;
+        }
+
+        if (user?.role === "admin") {
+          router.push("/admin/orders");
+          return;
+        }
+
+        router.push("/user/orders");
+      }
+    } catch (error) {
+      toast.error(error.message || "Failed to open notification");
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllNotificationsRead();
+      setNotifications((prev) => prev.map((entry) => ({ ...entry, isRead: true })));
+      setUnreadCount(0);
+      toast.success("Notifications marked as read");
+    } catch (error) {
+      toast.error(error.message || "Failed to update notifications");
+    }
   };
 
   return (
@@ -117,6 +191,71 @@ export default function Navbar() {
                   </span>
                 )}
               </Link>
+
+              {!showGuestActions ? (
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setNotificationOpen((prev) => !prev)}
+                    className="icon-btn relative"
+                    title="Notifications"
+                  >
+                    <BellIcon />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 min-w-5 rounded-full bg-rose-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {notificationOpen ? (
+                    <div className="absolute right-0 top-12 z-[80] w-[22rem] overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-2xl">
+                      <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">Notifications</p>
+                          <p className="text-xs text-gray-500">{unreadCount} unread</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleMarkAllRead}
+                          disabled={unreadCount === 0}
+                          className="text-xs font-semibold text-indigo-600 disabled:opacity-40"
+                        >
+                          Mark all read
+                        </button>
+                      </div>
+
+                      <div className="max-h-96 overflow-y-auto">
+                        {notifications.length === 0 ? (
+                          <div className="px-4 py-8 text-center text-sm text-gray-500">
+                            No notifications yet.
+                          </div>
+                        ) : (
+                          notifications.map((notification) => (
+                            <button
+                              key={notification.id}
+                              type="button"
+                              onClick={() => openNotification(notification)}
+                              className={`flex w-full gap-3 border-b border-gray-100 px-4 py-3 text-left transition hover:bg-gray-50 ${
+                                notification.isRead ? "bg-white" : "bg-amber-50/60"
+                              }`}
+                            >
+                              <span className={`mt-1 h-2.5 w-2.5 rounded-full ${notification.isRead ? "bg-gray-300" : "bg-amber-500"}`} />
+                              <span className="min-w-0 flex-1">
+                                <span className="block text-sm font-semibold text-gray-900">{notification.title}</span>
+                                <span className="mt-1 block text-xs leading-5 text-gray-600">{notification.message}</span>
+                                <span className="mt-2 block text-[11px] text-gray-400">
+                                  {new Date(notification.createdAt).toLocaleString()}
+                                </span>
+                              </span>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
 
               <div className="hidden md:block h-6 w-[1px] bg-gray-200 mx-2" />
 
@@ -264,6 +403,9 @@ function SearchIcon({ className = "" }) {
 }
 function CartIcon({ className = "" }) {
   return <svg className={className} width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+}
+function BellIcon({ className = "" }) {
+  return <svg className={className} width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
 }
 function MenuIcon() {
   return <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16m-7 6h7"/></svg>
