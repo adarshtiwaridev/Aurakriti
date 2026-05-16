@@ -87,7 +87,7 @@ const paymentSessionSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['created', 'paid', 'failed', 'expired'],
+      enum: ['created', 'processing', 'paid', 'failed', 'expired'],
       default: 'created',
       index: true,
     },

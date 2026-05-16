@@ -23,6 +23,13 @@ export async function GET(request) {
     return NextResponse.json({ success: false, message: 'Invalid view parameter.' }, { status: 400 });
   }
 
+  if (auth.user.role === 'admin') {
+    return NextResponse.json(
+      { success: false, message: 'Admins must use /api/admin/orders for order listing.' },
+      { status: 403 }
+    );
+  }
+
   const query = {};
   if (auth.user.role === 'user' || view === 'user') {
     query.user = auth.user._id;
