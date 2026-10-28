@@ -364,10 +364,8 @@ export default function ProductDetail() {
               <Sparkles className="h-4 w-4 text-[#C5A059]" />
               <span>Lifetime complimentary atelier resizing & ultrasonic polishing</span>
             </div>
-          </div>
-        </div>
-            <div className="flex items-center gap-3 text-sm text-slate-600">
-              <MessageSquare className="h-4 w-4" />
+            <div className="flex items-center gap-3 text-xs text-[#545B67]">
+              <MessageSquare className="h-4 w-4 text-[#C5A059]" />
               <span>24/7 customer support</span>
             </div>
           </div>
