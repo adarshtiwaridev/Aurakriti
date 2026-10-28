@@ -2,76 +2,84 @@
 
 import { motion } from 'framer-motion';
 import AuthCard from './AuthCard';
+import { Sparkles, ShieldCheck, Camera, Award } from 'lucide-react';
+import Link from 'next/link';
 
 export default function AuthLayout({ children, title, subtitle, linkText, linkHref }) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex">
-      {/* Left Side - Branding */}
-      <div className="hidden lg:flex lg:flex-1 lg:flex-col lg:justify-center lg:px-8 xl:px-12">
+    <div className="min-h-screen bg-[#FDFBF7] flex">
+      {/* Left Side - Luxury Maison Showcase */}
+      <div className="hidden lg:flex lg:flex-1 lg:flex-col lg:justify-center lg:px-12 xl:px-16 bg-[#0B0F17] text-white relative overflow-hidden">
+        <div className="absolute -right-24 -top-24 w-96 h-96 rounded-full bg-[#C5A059]/15 blur-3xl pointer-events-none" />
+        <div className="absolute -left-24 -bottom-24 w-96 h-96 rounded-full bg-[#E5C378]/10 blur-3xl pointer-events-none" />
+
         <motion.div
-          initial={{ opacity: 0, x: -50 }}
+          initial={{ opacity: 0, x: -40 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6 }}
-          className="mx-auto w-full max-w-md"
+          className="mx-auto w-full max-w-lg relative z-10"
         >
-          <div className="text-center">
-            <motion.div
-              initial={{ scale: 0.8 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2, duration: 0.5 }}
-              className="mx-auto h-20 w-20 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-3xl flex items-center justify-center mb-8 shadow-2xl"
-            >
-              <svg className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-              </svg>
-            </motion.div>
+          <div>
+            <Link href="/" className="inline-block group mb-8">
+              <span className="text-3xl font-extrabold tracking-tight text-white font-serif">
+                AURA<span className="text-[#C5A059] italic font-normal ml-0.5">KRITI</span>
+              </span>
+              <p className="text-[10px] uppercase tracking-[0.32em] text-[#C5A059] font-semibold mt-1">
+                Haute Joaillerie & Maison
+              </p>
+            </Link>
+
             <motion.h1
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+              className="text-4xl xl:text-5xl font-serif font-bold text-white leading-[1.2] mb-6"
+            >
+              Masterpieces in Gold, <br />
+              <span className="text-[#C5A059] font-normal italic">Sculpted for Eternity</span>
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.5 }}
+              className="text-sm xl:text-base text-stone-300 leading-relaxed mb-10 max-w-md"
+            >
+              Sign in to access your personal jewelry vaults, view order status, or explore our 3D AR virtual try-on mirror.
+            </motion.p>
+
+            {/* Trust Badges Grid */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4, duration: 0.5 }}
-              className="text-5xl font-bold text-gray-900 mb-6"
+              className="grid grid-cols-2 gap-4 text-xs text-stone-300"
             >
-              Welcome to <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">EcoShop</span>
-            </motion.h1>
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6, duration: 0.5 }}
-              className="text-xl text-gray-600 mb-8 leading-relaxed"
-            >
-              Your sustainable shopping destination. Discover eco-friendly products from trusted sellers.
-            </motion.p>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.8, duration: 0.5 }}
-              className="grid grid-cols-2 gap-6 text-sm text-gray-500"
-            >
-              <div className="flex items-center">
-                <div className="h-3 w-3 bg-green-500 rounded-full mr-3"></div>
-                Carbon Neutral
+              <div className="flex items-center gap-2.5 p-3 rounded-xl bg-white/5 border border-white/10">
+                <ShieldCheck className="w-4 h-4 text-[#C5A059]" />
+                <span>BIS Hallmarked</span>
               </div>
-              <div className="flex items-center">
-                <div className="h-3 w-3 bg-blue-500 rounded-full mr-3"></div>
-                Eco-Friendly
+              <div className="flex items-center gap-2.5 p-3 rounded-xl bg-white/5 border border-white/10">
+                <Camera className="w-4 h-4 text-[#C5A059]" />
+                <span>1:1 AR Try-On</span>
               </div>
-              <div className="flex items-center">
-                <div className="h-3 w-3 bg-purple-500 rounded-full mr-3"></div>
-                Sustainable
+              <div className="flex items-center gap-2.5 p-3 rounded-xl bg-white/5 border border-white/10">
+                <Award className="w-4 h-4 text-[#C5A059]" />
+                <span>Certified Solitaires</span>
               </div>
-              <div className="flex items-center">
-                <div className="h-3 w-3 bg-indigo-500 rounded-full mr-3"></div>
-                Trusted Sellers
+              <div className="flex items-center gap-2.5 p-3 rounded-xl bg-white/5 border border-white/10">
+                <Sparkles className="w-4 h-4 text-[#C5A059]" />
+                <span>Atelier Resizing</span>
               </div>
             </motion.div>
           </div>
         </motion.div>
       </div>
 
-      {/* Right Side - Form */}
-      <div className="flex-1 flex flex-col justify-center px-6 py-12 lg:px-8 xl:px-12">
+      {/* Right Side - Form Card Container */}
+      <div className="flex-1 flex flex-col justify-center px-6 py-12 lg:px-12 xl:px-16">
         <motion.div
-          initial={{ opacity: 0, x: 50 }}
+          initial={{ opacity: 0, x: 40 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6 }}
           className="mx-auto w-full max-w-md"

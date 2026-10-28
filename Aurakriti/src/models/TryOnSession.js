@@ -98,7 +98,6 @@ const TryOnSessionSchema = new mongoose.Schema({
 // Indexes for performance
 TryOnSessionSchema.index({ userId: 1, timestamp: -1 });
 TryOnSessionSchema.index({ productId: 1, timestamp: -1 });
-TryOnSessionSchema.index({ sessionId: 1 });
 TryOnSessionSchema.index({ 'facialFeatures.faceShape': 1 });
 
 // Virtual for session duration

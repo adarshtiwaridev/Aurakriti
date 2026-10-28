@@ -219,11 +219,15 @@ function ARSceneLighting({ settings = {} }) {
 function PerformanceMonitor({ onPerformanceUpdate }) {
   const { gl } = useThree();
   const frameCount = useRef(0);
-  const lastTime = useRef(performance.now());
+  const lastTime = useRef(0);
   
   useFrame(() => {
     frameCount.current++;
     const currentTime = performance.now();
+    if (lastTime.current === 0) {
+      lastTime.current = currentTime;
+      return;
+    }
     
     // Update every second
     if (currentTime - lastTime.current >= 1000) {

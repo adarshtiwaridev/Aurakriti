@@ -223,10 +223,10 @@ export default function CartPage() {
             <h2 className="luxury-serif text-2xl text-[#3d2f24]">Your Cart is Empty</h2>
             <p className="mt-3 text-[#7b6652]">Explore our elegant jewellery collection and add your favourite pieces.</p>
             <Link
-              href="/"
-              className="mt-8 inline-flex rounded-full bg-[#c9a14a] px-8 py-4 text-sm font-bold uppercase tracking-[0.18em] text-white hover:bg-[#b88f37] shadow-lg shadow-[#c9a14a30] transition-transform hover:scale-105"
+              href="/shop"
+              className="mt-8 inline-flex rounded-sm bg-[#0B0F17] px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.2em] text-[#C5A059] hover:bg-[#1E293B] border border-[#C5A059]/40 shadow-sm transition-transform hover:scale-102"
             >
-              Shop Now
+              Explore Collections
             </Link>
           </motion.div>
         ) : (
@@ -298,7 +298,7 @@ export default function CartPage() {
               <Link
                 href={isAuthenticated ? "/user/checkout" : "/auth/login?redirect=/user/checkout"}
                 aria-disabled={isUpdating}
-                className="mt-8 block w-full rounded-full bg-[#c9a14a] px-5 py-4 text-center text-sm font-bold uppercase tracking-[0.18em] text-white shadow-lg shadow-[#c9a14a30] transition-all hover:bg-[#b88f37] hover:shadow-xl hover:shadow-[#c9a14a40] disabled:bg-[#d9cec1] disabled:text-[#9b7a48]"
+                className="mt-8 block w-full rounded-sm bg-[#0B0F17] px-5 py-4 text-center text-xs font-semibold uppercase tracking-[0.2em] text-[#C5A059] border border-[#C5A059]/40 hover:bg-[#1E293B] shadow-md transition-all disabled:bg-[#d9cec1] disabled:text-[#9b7a48]"
               >
                 {isUpdating ? 'Updating...' : isAuthenticated ? 'Proceed to Checkout' : 'Login to Checkout'}
               </Link>

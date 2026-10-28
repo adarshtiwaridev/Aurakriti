@@ -208,7 +208,6 @@ const Jewellery3DModelSchema = new mongoose.Schema({
 });
 
 // Indexes for performance
-Jewellery3DModelSchema.index({ productId: 1 });
 Jewellery3DModelSchema.index({ jewelleryType: 1 });
 Jewellery3DModelSchema.index({ 'materials.metalType': 1 });
 Jewellery3DModelSchema.index({ isActive: 1, priority: -1 });

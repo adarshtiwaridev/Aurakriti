@@ -749,7 +749,7 @@ export default function SimpleARInterface({
               <h3 className="text-white text-lg font-semibold mb-4">Start AR Try-On</h3>
               <p className="text-gray-300 mb-6">
                 Click the camera button to start your virtual try-on experience. 
-                Make sure you're in a well-lit area and your face is clearly visible.
+                Make sure you&apos;re in a well-lit area and your face is clearly visible.
               </p>
               <button
                 onClick={startCamera}

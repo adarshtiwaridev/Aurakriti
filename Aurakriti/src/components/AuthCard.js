@@ -6,43 +6,34 @@ import { motion } from 'framer-motion';
 export default function AuthCard({ title, subtitle, linkText, linkHref, children }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/30 p-8 md:p-10"
+      className="bg-white rounded-3xl shadow-lg border border-[#EAE6DF] p-8 sm:p-10"
     >
       <div className="text-center mb-8">
-        <motion.h2
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-3"
-        >
+        <h2 className="text-2xl sm:text-3xl font-serif font-bold text-[#0B0F17] mb-2 tracking-tight">
           {title}
-        </motion.h2>
+        </h2>
         {subtitle && (
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="text-gray-600 text-lg"
-          >
+          <p className="text-xs sm:text-sm text-[#64748B]">
             {subtitle}{' '}
             {linkText && linkHref && (
               <Link
                 href={linkHref}
-                className="font-semibold text-indigo-600 hover:text-indigo-500 transition-colors duration-200"
+                className="font-bold text-[#C5A059] hover:underline transition-colors ml-1"
               >
                 {linkText}
               </Link>
             )}
-          </motion.p>
+          </p>
         )}
       </div>
+
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
+        initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
+        transition={{ delay: 0.2 }}
       >
         {children}
       </motion.div>

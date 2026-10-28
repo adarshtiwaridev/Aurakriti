@@ -39,7 +39,7 @@ export default function LoginPage() {
     try {
       const response = await login(data);
       toast.success('Login successful!', {
-        description: 'Welcome back to EcoShop!',
+        description: 'Welcome back to Aurakriti Haute Joaillerie!',
       });
 
       if (rememberMe) {
@@ -117,16 +117,16 @@ export default function LoginPage() {
               type="checkbox"
               checked={rememberMe}
               onChange={(e) => setRememberMe(e.target.checked)}
-              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+              className="h-4 w-4 text-[#C5A059] focus:ring-[#C5A059] border-[#EAE6DF] rounded"
             />
-            <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
+            <label htmlFor="remember-me" className="ml-2 block text-xs text-stone-600">
               Remember me
             </label>
           </div>
 
           <Link
             href="/auth/login/forgot-password"
-            className="text-sm font-medium text-indigo-600 hover:text-indigo-500 transition-colors"
+            className="text-xs font-semibold text-[#C5A059] hover:underline transition-colors"
           >
             Forgot password?
           </Link>

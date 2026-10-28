@@ -1,28 +1,55 @@
 @import "tailwindcss";
- 
-/* ── Design tokens ─────────────────────────────────────────── */
+
+/* ── Haute Joaillerie & Maison Design Tokens ───────────────── */
 :root {
-  /* Brand */
-  --brand-50:  #EEF2FF;
-  --brand-100: #E0E7FF;
-  --brand-200: #C7D2FE;
-  --brand-400: #818CF8;
-  --brand-500: #6366F1;
-  --brand-600: #4F46E5;
-  --brand-700: #4338CA;
- 
-  /* Neutrals */
-  --gray-50:  #F8FAFC;
-  --gray-100: #F1F5F9;
-  --gray-200: #E2E8F0;
-  --gray-300: #CBD5E1;
-  --gray-400: #94A3B8;
+  /* Primary Obsidian Slate */
+  --color-primary: #0B0F17;
+  --color-primary-hover: #161F2E;
+  --color-primary-foreground: #FFFFFF;
+  --color-primary-container: #181C24;
+
+  /* Secondary Champagne Gold & Accents */
+  --color-gold: #C5A059;
+  --color-gold-hover: #B38E46;
+  --color-gold-light: #F7EEDB;
+  --color-gold-leaf: #E5C378;
+  --color-secondary: #C5A059;
+  --color-secondary-hover: #B38E46;
+
+  /* Legacy brand mapped to luxury palette */
+  --brand-50:  #FDFBF7;
+  --brand-100: #F7EEDB;
+  --brand-200: #EAD8B5;
+  --brand-400: #D8B772;
+  --brand-500: #C5A059;
+  --brand-600: #B38E46;
+  --brand-700: #947231;
+
+  /* Silk Canvas & Surfaces */
+  --surface-page: #FDFBF7;
+  --surface-subtle: #F7F5F0;
+  --surface-card: #FFFFFF;
+  --surface-elevated: #FCFBF9;
+  --surface-dark: #0B0F17;
+  --surface-dark-card: #131A26;
+
+  /* Hairline Borders */
+  --border-hairline: #EAE6DF;
+  --border-muted: #E2DDD5;
+  --border-gold: rgba(197, 160, 89, 0.4);
+
+  /* Neutrals & Slate */
+  --gray-50:  #FDFBF7;
+  --gray-100: #F7F5F0;
+  --gray-200: #EAE6DF;
+  --gray-300: #D6D0C5;
+  --gray-400: #9BA3AF;
   --gray-500: #64748B;
-  --gray-600: #475569;
+  --gray-600: #4B5565;
   --gray-700: #334155;
   --gray-800: #1E293B;
-  --gray-900: #0F172A;
- 
+  --gray-900: #0B0F17;
+
   /* Semantic */
   --success-bg: #DCFCE7;
   --success-text: #166534;
@@ -30,230 +57,287 @@
   --warning-text: #92400E;
   --error-bg: #FEE2E2;
   --error-text: #991B1B;
- 
-  /* Surface */
-  --surface-page: #F8F9FB;
-  --surface-card: #FFFFFF;
-  --surface-elevated: #FFFFFF;
- 
-  /* Spacing rhythm */
+
+  /* Spacing & Radii (Linear Precision) */
+  --radius-xs: 4px;
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
   --radius-xl: 20px;
+  --radius-2xl: 28px;
   --radius-full: 9999px;
- 
-  /* Shadows */
-  --shadow-sm: 0 1px 3px rgba(15,23,42,0.06), 0 1px 2px rgba(15,23,42,0.04);
-  --shadow-md: 0 4px 16px rgba(15,23,42,0.08), 0 2px 6px rgba(15,23,42,0.04);
-  --shadow-brand: 0 4px 20px rgba(99,102,241,0.18);
- 
+
+  /* Shadows (Atmospheric Diffused Occlusion) */
+  --shadow-sm: 0 1px 3px rgba(11, 15, 23, 0.04), 0 1px 2px rgba(11, 15, 23, 0.02);
+  --shadow-md: 0 8px 24px -4px rgba(11, 15, 23, 0.06), 0 2px 6px -1px rgba(11, 15, 23, 0.03);
+  --shadow-lg: 0 20px 48px -12px rgba(11, 15, 23, 0.09), 0 4px 12px -2px rgba(11, 15, 23, 0.04);
+  --shadow-gold: 0 8px 32px rgba(197, 160, 89, 0.22);
+
   /* Typography */
-  --font-display: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
-  --font-body: 'Inter', system-ui, sans-serif;
-  --font-geist: var(--font-geist-fallback, system-ui, sans-serif);
-  --font-geist-mono: var(--font-geist-mono-fallback, ui-monospace, monospace);
-  --font-playfair: var(--font-playfair-fallback, system-ui, serif);
+  --font-display: var(--font-playfair), 'Playfair Display', Georgia, serif;
+  --font-body: var(--font-geist), 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
- 
+
 /* ── Base reset ─────────────────────────────────────────────── */
 *, *::before, *::after {
   box-sizing: border-box;
 }
- 
+
 html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
- 
+
 body {
   font-family: var(--font-body);
   background-color: var(--surface-page);
   color: var(--gray-900);
   line-height: 1.6;
 }
- 
+
 /* ── Typography helpers ────────────────────────────────────── */
+.luxury-serif,
+.font-serif,
+.font-playfair,
 .display-heading {
   font-family: var(--font-display);
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  line-height: 1.1;
-}
- 
-.section-heading {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--gray-900);
   letter-spacing: -0.02em;
 }
- 
-/* ── Button system ──────────────────────────────────────────── */
+
+.luxury-kicker {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+  color: var(--color-gold);
+}
+
+.section-heading {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+@media (min-width: 768px) {
+  .section-heading {
+    font-size: 2.5rem;
+  }
+}
+
+/* ── Luxury Button System ───────────────────────────────────── */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
   font-weight: 600;
   font-size: 0.875rem;
   border-radius: var(--radius-md);
-  border: none;
+  border: 1px solid transparent;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   text-decoration: none;
   white-space: nowrap;
-  padding: 0.6rem 1.25rem;
+  padding: 0.65rem 1.4rem;
 }
- 
+
 .btn:active {
   transform: scale(0.98);
 }
- 
-.btn-primary {
-  background: var(--brand-500);
-  color: #fff;
-  box-shadow: var(--shadow-brand);
+
+/* Primary Button: Obsidian Slate */
+.btn-primary,
+.btn-luxury-primary {
+  background: var(--color-primary);
+  color: #FFFFFF;
+  border-color: var(--color-primary);
+  box-shadow: 0 4px 14px rgba(11, 15, 23, 0.16);
 }
- 
-.btn-primary:hover {
-  background: var(--brand-600);
+
+.btn-primary:hover,
+.btn-luxury-primary:hover {
+  background: var(--color-primary-hover);
+  border-color: var(--color-gold);
+  box-shadow: 0 6px 20px rgba(11, 15, 23, 0.24);
 }
- 
-.btn-secondary {
-  background: var(--brand-50);
-  color: var(--brand-600);
+
+/* Gold Button: Champagne Gold */
+.btn-gold,
+.btn-luxury-gold {
+  background: var(--color-gold);
+  color: #0B0F17;
+  font-weight: 700;
+  box-shadow: var(--shadow-gold);
 }
- 
-.btn-secondary:hover {
-  background: var(--brand-100);
+
+.btn-gold:hover,
+.btn-luxury-gold:hover {
+  background: var(--color-gold-hover);
+  color: #FFFFFF;
 }
- 
+
+/* Secondary Button: Silk Canvas with Hairline Border */
+.btn-secondary,
+.btn-luxury-secondary {
+  background: #FFFFFF;
+  color: var(--color-primary);
+  border: 1px solid var(--border-hairline);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-secondary:hover,
+.btn-luxury-secondary:hover {
+  background: var(--surface-subtle);
+  border-color: var(--color-gold);
+}
+
+/* Ghost Button */
 .btn-ghost {
   background: transparent;
-  color: var(--gray-600);
-  border: 1.5px solid var(--gray-200);
+  color: var(--gray-700);
+  border: 1px solid transparent;
 }
- 
+
 .btn-ghost:hover {
-  background: var(--gray-100);
-  color: var(--gray-900);
+  background: var(--surface-subtle);
+  color: var(--color-primary);
 }
- 
+
 .btn-sm {
-  padding: 0.4rem 0.875rem;
+  padding: 0.45rem 1rem;
   font-size: 0.8125rem;
 }
- 
+
 .btn-lg {
-  padding: 0.75rem 1.75rem;
+  padding: 0.85rem 2rem;
   font-size: 0.9375rem;
-  border-radius: var(--radius-lg);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
- 
-/* ── Card system ────────────────────────────────────────────── */
-.card {
+
+/* ── Card System ────────────────────────────────────────────── */
+.card,
+.card-luxury {
   background: var(--surface-card);
-  border: 1px solid var(--gray-200);
+  border: 1px solid var(--border-hairline);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  transition: box-shadow 0.2s, border-color 0.2s;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, border-color 0.3s ease;
 }
- 
-.card:hover {
+
+.card:hover,
+.card-luxury:hover {
   box-shadow: var(--shadow-md);
-  border-color: var(--brand-200);
+  border-color: rgba(197, 160, 89, 0.45);
 }
- 
-/* ── Badge system ───────────────────────────────────────────── */
+
+/* ── Badge System ───────────────────────────────────────────── */
 .badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   font-size: 0.6875rem;
   font-weight: 700;
-  padding: 3px 8px;
+  padding: 4px 10px;
   border-radius: var(--radius-full);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
- 
-.badge-sale   { background: var(--success-bg); color: var(--success-text); }
-.badge-hot    { background: var(--warning-bg); color: var(--warning-text); }
-.badge-new    { background: var(--brand-50);   color: var(--brand-600); }
-.badge-danger { background: var(--error-bg);   color: var(--error-text); }
- 
-/* ── Form inputs ────────────────────────────────────────────── */
-.input {
+
+.badge-ar {
+  background: rgba(253, 251, 247, 0.95);
+  color: #8A6827;
+  border: 1px solid var(--color-gold);
+  box-shadow: 0 2px 10px rgba(197, 160, 89, 0.18);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  backdrop-filter: blur(8px);
+}
+
+.badge-sale   { background: var(--success-bg); color: var(--success-text); border: 1px solid rgba(22,101,52,0.15); }
+.badge-hot    { background: #FEF3C7; color: #92400E; border: 1px solid rgba(146,64,14,0.15); }
+.badge-new    { background: #F7EEDB; color: #8A6827; border: 1px solid rgba(197,160,89,0.3); }
+.badge-danger { background: var(--error-bg); color: var(--error-text); }
+
+/* ── Form Inputs ────────────────────────────────────────────── */
+.input,
+.input-luxury {
   width: 100%;
-  padding: 0.6rem 0.875rem;
+  padding: 0.75rem 1rem;
   font-size: 0.875rem;
-  border: 1.5px solid var(--gray-200);
+  border: 1.5px solid var(--border-hairline);
   border-radius: var(--radius-md);
-  background: var(--surface-card);
-  color: var(--gray-900);
+  background: #FFFFFF;
+  color: var(--color-primary);
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.2s, box-shadow 0.2s;
   font-family: var(--font-body);
 }
- 
-.input:focus {
-  border-color: var(--brand-400);
-  box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+
+.input:focus,
+.input-luxury:focus {
+  border-color: var(--color-gold);
+  box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.15);
 }
- 
-.input::placeholder {
+
+.input::placeholder,
+.input-luxury::placeholder {
   color: var(--gray-400);
 }
- 
-/* ── Loading skeleton ───────────────────────────────────────── */
+
+/* ── Loading Skeleton ───────────────────────────────────────── */
 @keyframes skeleton-shimmer {
   0%   { background-position: -400px 0; }
   100% { background-position: 400px 0; }
 }
- 
+
 .skeleton {
-  background: linear-gradient(90deg, var(--gray-100) 25%, var(--gray-50) 50%, var(--gray-100) 75%);
+  background: linear-gradient(90deg, #F7F5F0 25%, #FAF9F6 50%, #F7F5F0 75%);
   background-size: 800px 100%;
   animation: skeleton-shimmer 1.5s infinite linear;
   border-radius: var(--radius-md);
 }
- 
-/* ── Section utility ────────────────────────────────────────── */
+
+/* ── Section Utility ────────────────────────────────────────── */
 .section-container {
-  max-width: 1280px;
+  max-width: 1320px;
   margin: 0 auto;
   padding: 0 1.5rem;
 }
- 
+
 @media (min-width: 768px) {
   .section-container {
     padding: 0 2rem;
   }
 }
- 
-/* ── Toast / notification ───────────────────────────────────── */
-.toast {
-  position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
-  background: var(--gray-900);
-  color: #fff;
-  padding: 0.75rem 1.25rem;
-  border-radius: var(--radius-md);
-  font-size: 0.875rem;
-  font-weight: 500;
-  z-index: 1000;
-  box-shadow: var(--shadow-md);
-  animation: toast-in 0.25s ease;
+
+/* ── Luxury Announcement Ribbon ─────────────────────────────── */
+.announcement-bar {
+  background: var(--color-primary);
+  color: #EDE8DD;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid rgba(197, 160, 89, 0.2);
 }
- 
-@keyframes toast-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
+
+/* ── Glassmorphic floating bars ─────────────────────────────── */
+.glass-nav {
+  background: rgba(253, 251, 247, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border-hairline);
 }
- 
-/* ── Scrollbar ──────────────────────────────────────────────── */
+
+/* ── Custom Scrollbar ───────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--gray-400); }
- 
+::-webkit-scrollbar-track { background: var(--surface-page); }
+::-webkit-scrollbar-thumb { background: #D6D0C5; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-gold); }

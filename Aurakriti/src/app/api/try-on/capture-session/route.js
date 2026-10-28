@@ -3,7 +3,6 @@ import connectDB from '@/lib/db';
 import jwt from 'jsonwebtoken';
 import TryOnSession from '@/models/TryOnSession';
 import User from '@/models/User';
-import { v4 as uuidv4 } from 'uuid';
 
 const DEBUG_PREFIX = '[AR Session Capture API]';
 
@@ -288,38 +287,104 @@ class SessionProcessor {
 const sessionProcessor = new SessionProcessor();
 
 export async function POST(request) {
-const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   
-try {
-  // Parse request body
-  const body = await request.json();
-  const { 
-    sessionId, 
-    capturedImages, 
-    interactionEvents, 
-    userRating, 
-    userFeedback,
-    jewelleryType,
-    facialFeatures,
-    anchorPoints,
-    deviceInfo,
-    performance,
-    endSession = false
-  } = body;
+  try {
+    const body = await request.json();
+    const { 
+      sessionId, 
+      productId,
+      userId,
+      capturedImages, 
+      interactionEvents, 
+      userRating, 
+      userFeedback,
+      jewelleryType = 'earring',
+      facialFeatures,
+      anchorPoints,
+      deviceInfo,
+      performance,
+      endSession = false
+    } = body;
+
+    if (!sessionId) {
+      return NextResponse.json(
+        { success: false, message: 'Missing sessionId parameter', debugRequestId: requestId },
+        { status: 400 }
+      );
+    }
+
+    await connectDB();
+
+    let session = await TryOnSession.findOne({ sessionId });
+    if (session) {
+      if (capturedImages) session.capturedImages = capturedImages;
+      if (userRating) session.userRating = userRating;
+      if (userFeedback) session.userFeedback = userFeedback;
+      if (facialFeatures) session.facialFeatures = { ...session.facialFeatures, ...facialFeatures };
+      if (anchorPoints) session.anchorPoints = anchorPoints;
+      if (deviceInfo) session.deviceInfo = deviceInfo;
+      if (performance) session.performance = performance;
+      if (endSession) {
+        session.endedAt = new Date();
+        session.isActive = false;
+        session.tryOnDuration = Math.round((session.endedAt - session.timestamp) / 1000);
+      }
+      await session.save();
+    } else {
+      session = await TryOnSession.create({
+        sessionId,
+        productId: productId || undefined,
+        userId: userId || undefined,
+        capturedImages: capturedImages || [],
+        jewelleryType: jewelleryType,
+        facialFeatures: facialFeatures || {},
+        anchorPoints: anchorPoints || {},
+        deviceInfo: deviceInfo || {},
+        performance: performance || {},
+        userRating: userRating || undefined,
+        userFeedback: userFeedback || undefined,
+        timestamp: new Date(),
+        isActive: !endSession,
+        endedAt: endSession ? new Date() : undefined,
+        tryOnDuration: endSession ? 10 : undefined
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: { session },
+      debugRequestId: requestId
+    });
+  } catch (error) {
+    console.error(`${DEBUG_PREFIX} Error saving session:`, {
+      requestId,
+      error: error.message,
+      stack: error.stack
+    });
+    return NextResponse.json(
+      { 
+        success: false, 
+        message: 'Failed to save session', 
+        error: error.message, 
+        debugRequestId: requestId 
+      },
+      { status: 500 }
+    );
+  }
+}
+
 export async function GET(request) {
   const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   
   try {
-    // Get query parameters
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const sessionId = searchParams.get('sessionId');
 
-    // Connect to database
     await connectDB();
 
     if (sessionId) {
-      // Get specific session with full processing
       const session = await TryOnSession.findOne({ sessionId })
         .populate('productId', 'title price images category');
 
@@ -327,13 +392,13 @@ export async function GET(request) {
         return NextResponse.json(
           { 
             success: false, 
-            message: 'Session not found' 
+            message: 'Session not found',
+            debugRequestId: requestId
           },
           { status: 404 }
         );
       }
 
-      // Generate insights for this session
       const userHistory = userId ? 
         await TryOnSession.find({ userId })
           .sort({ timestamp: -1 })
@@ -345,16 +410,22 @@ export async function GET(request) {
         success: true,
         data: {
           session,
-          insights,
-          debugRequestId: requestId
-      requestId,
-      userId: decoded.userId,
-      sessionCount: sessions.length,
-      totalCount,
-      page,
-      limit
-    });
-    
+          insights
+        },
+        debugRequestId: requestId
+      });
+    }
+
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const limit = parseInt(searchParams.get('limit') || '10', 10);
+    const query = userId ? { userId } : {};
+    const totalCount = await TryOnSession.countDocuments(query);
+    const sessions = await TryOnSession.find(query)
+      .sort({ timestamp: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .populate('productId', 'title price images category');
+
     return NextResponse.json({
       success: true,
       data: {
@@ -368,7 +439,6 @@ export async function GET(request) {
       },
       debugRequestId: requestId
     });
-    
   } catch (error) {
     console.error(`${DEBUG_PREFIX} Error retrieving session history`, {
       requestId,

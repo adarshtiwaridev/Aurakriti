@@ -3,7 +3,6 @@ import connectDB from '@/lib/db';
 import jwt from 'jsonwebtoken';
 import Jewellery3DModel from '@/models/Jewellery3DModel';
 import Product from '@/models/Product';
-import { v4 as uuidv4 } from 'uuid';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 

@@ -3,22 +3,26 @@
 import { useAuth } from '@/hooks/useAuth';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { 
+  Users, 
+  Store, 
+  PackageCheck, 
+  ShoppingBag, 
+  BarChart3, 
+  Image as ImageIcon,
+  ArrowUpRight,
+  TrendingUp,
+  ShieldCheck,
+  Layers
+} from 'lucide-react';
 
 const cards = [
-  { href: '/admin/users', label: 'Manage Users', desc: 'View, edit roles, verify or delete users.', icon: '👥', color: 'indigo' },
-  { href: '/admin/sellers', label: 'Sellers', desc: 'Monitor seller accounts and performance.', icon: '🏪', color: 'blue' },
-  { href: '/admin/products', label: 'Product Moderation', desc: 'Approve, deactivate or remove listings.', icon: '📦', color: 'yellow' },
-  { href: '/admin/orders', label: 'Order Oversight', desc: 'View all platform orders and update status.', icon: '🛒', color: 'purple' },
-  { href: '/admin/analytics', label: 'Analytics', desc: 'Revenue, top products, user growth charts.', icon: '📊', color: 'green' },
+  { href: '/admin/users', label: 'Manage Clients & Artisans', desc: 'View, edit roles, verify or manage accounts.', icon: Users },
+  { href: '/admin/sellers', label: 'Maison Sellers', desc: 'Monitor artisanal partners and performance metrics.', icon: Store },
+  { href: '/admin/products', label: 'Jewellery Moderation', desc: 'Approve, certify, or manage catalog listings.', icon: PackageCheck },
+  { href: '/admin/orders', label: 'Client Orders', desc: 'Oversight of luxury orders and shipping stages.', icon: ShoppingBag },
+  { href: '/admin/analytics', label: 'Atelier Intelligence', desc: 'Revenue, high-ticket pieces, and growth analysis.', icon: BarChart3 },
 ];
-
-const colorMap = {
-  indigo: 'bg-indigo-50 text-indigo-600 border-indigo-100',
-  blue: 'bg-blue-50 text-blue-600 border-blue-100',
-  yellow: 'bg-yellow-50 text-yellow-600 border-yellow-100',
-  purple: 'bg-purple-50 text-purple-600 border-purple-100',
-  green: 'bg-green-50 text-green-600 border-green-100',
-};
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -34,79 +38,132 @@ export default function AdminDashboard() {
   }, []);
 
   return (
-    <div className="p-6">
-
-      {/* Top Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-
-        <Link href="/admin/products" className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-          <div className="text-center">
-            <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-              📦
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Products</h3>
-            <p className="text-gray-600 text-sm mb-4">Review and moderate product listings.</p>
-          </div>
-        </Link>
-
-        <Link href="/admin/carousel" className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-          <div className="text-center">
-            <div className="bg-amber-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-              🖼️
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Carousel</h3>
-            <p className="text-gray-600 text-sm mb-4">Manage homepage carousel slides.</p>
-          </div>
-        </Link>
-
+    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
+      {/* Header */}
+      <div className="border-b border-[#EAE6DF] pb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <span className="text-xs uppercase tracking-[0.2em] text-[#C5A059] font-medium block">
+            Maison Administration
+          </span>
+          <h1 className="text-2xl sm:text-3xl font-serif text-[#0B0F17] mt-1">
+            Executive Command Suite
+          </h1>
+        </div>
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-stone-100 text-stone-700 text-xs font-medium">
+          <ShieldCheck className="w-3.5 h-3.5 text-[#C5A059]" />
+          <span>Role: High Atelier Admin</span>
+        </div>
       </div>
 
-      {/* Live Stats */}
+      {/* Primary Action Highlights */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Link 
+          href="/admin/products" 
+          className="bg-white p-6 rounded-sm border border-[#EAE6DF] hover:border-[#C5A059] transition-all duration-200 group flex items-start justify-between shadow-sm"
+        >
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-sm bg-[#0B0F17] text-[#C5A059] flex items-center justify-center shrink-0">
+              <PackageCheck className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-serif font-semibold text-[#0B0F17] group-hover:text-[#C5A059] transition-colors">
+                Product Catalog Moderation
+              </h3>
+              <p className="text-xs text-stone-500 mt-1">
+                Certify 3D models, review hallmarking metadata, and approve new listings.
+              </p>
+            </div>
+          </div>
+          <ArrowUpRight className="w-5 h-5 text-stone-400 group-hover:text-[#C5A059] transition-colors shrink-0" />
+        </Link>
+
+        <Link 
+          href="/admin/carousel" 
+          className="bg-white p-6 rounded-sm border border-[#EAE6DF] hover:border-[#C5A059] transition-all duration-200 group flex items-start justify-between shadow-sm"
+        >
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-sm bg-[#F7F5F0] text-[#0B0F17] flex items-center justify-center shrink-0 border border-[#EAE6DF]">
+              <ImageIcon className="w-6 h-6 text-[#C5A059]" />
+            </div>
+            <div>
+              <h3 className="text-base font-serif font-semibold text-[#0B0F17] group-hover:text-[#C5A059] transition-colors">
+                Showcase Editorial Carousel
+              </h3>
+              <p className="text-xs text-stone-500 mt-1">
+                Curate hero campaigns, seasonal bridal spotlights, and high-jewelry banners.
+              </p>
+            </div>
+          </div>
+          <ArrowUpRight className="w-5 h-5 text-stone-400 group-hover:text-[#C5A059] transition-colors shrink-0" />
+        </Link>
+      </div>
+
+      {/* Live Financial & Order Metrics */}
       {summary && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-xl shadow p-4">
-            <p className="text-xs text-gray-500">Total Revenue</p>
-            <p className="text-xl font-bold text-green-600 mt-1">{summary.totalRevenue}</p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white rounded-sm border border-[#EAE6DF] p-5 shadow-sm">
+            <div className="flex items-center justify-between text-stone-400 text-xs">
+              <span className="uppercase tracking-wider">Gross Revenue</span>
+              <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
+            </div>
+            <p className="text-2xl font-serif text-[#0B0F17] mt-2">{summary.totalRevenue}</p>
           </div>
 
-          <div className="bg-white rounded-xl shadow p-4">
-            <p className="text-xs text-gray-500">Total Orders</p>
-            <p className="text-xl font-bold text-indigo-600 mt-1">{summary.totalOrders}</p>
+          <div className="bg-white rounded-sm border border-[#EAE6DF] p-5 shadow-sm">
+            <div className="flex items-center justify-between text-stone-400 text-xs">
+              <span className="uppercase tracking-wider">Total Orders</span>
+              <ShoppingBag className="w-3.5 h-3.5 text-[#C5A059]" />
+            </div>
+            <p className="text-2xl font-serif text-[#0B0F17] mt-2">{summary.totalOrders}</p>
           </div>
 
-          <div className="bg-white rounded-xl shadow p-4">
-            <p className="text-xs text-gray-500">Users</p>
-            <p className="text-xl font-bold text-blue-600 mt-1">{summary.totalUsers}</p>
+          <div className="bg-white rounded-sm border border-[#EAE6DF] p-5 shadow-sm">
+            <div className="flex items-center justify-between text-stone-400 text-xs">
+              <span className="uppercase tracking-wider">Active Clients</span>
+              <Users className="w-3.5 h-3.5 text-blue-600" />
+            </div>
+            <p className="text-2xl font-serif text-[#0B0F17] mt-2">{summary.totalUsers}</p>
           </div>
 
-          <div className="bg-white rounded-xl shadow p-4">
-            <p className="text-xs text-gray-500">Active Products</p>
-            <p className="text-xl font-bold text-yellow-600 mt-1">{summary.activeProducts}</p>
+          <div className="bg-white rounded-sm border border-[#EAE6DF] p-5 shadow-sm">
+            <div className="flex items-center justify-between text-stone-400 text-xs">
+              <span className="uppercase tracking-wider">Live Vault Pieces</span>
+              <Layers className="w-3.5 h-3.5 text-amber-600" />
+            </div>
+            <p className="text-2xl font-serif text-[#0B0F17] mt-2">{summary.activeProducts}</p>
           </div>
         </div>
       )}
 
-      {/* Navigation Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {cards.map((card) => (
-          <Link
-            key={card.href}
-            href={card.href}
-            className="bg-white rounded-xl shadow hover:shadow-md transition-shadow p-5 flex items-start gap-4 group"
-          >
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl border ${colorMap[card.color]}`}>
-              {card.icon}
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">
-                {card.label}
-              </h3>
-              <p className="text-sm text-gray-500 mt-0.5">{card.desc}</p>
-            </div>
-          </Link>
-        ))}
+      {/* Operations Navigation */}
+      <div>
+        <h2 className="text-xs uppercase tracking-widest text-stone-500 mb-4 font-medium">
+          Maison Operations Modules
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {cards.map((card) => {
+            const Icon = card.icon;
+            return (
+              <Link
+                key={card.href}
+                href={card.href}
+                className="bg-white rounded-sm border border-[#EAE6DF] hover:border-[#C5A059] transition-all duration-200 p-5 flex items-start gap-4 group shadow-sm"
+              >
+                <div className="w-10 h-10 rounded-sm bg-[#F7F5F0] border border-[#EAE6DF] flex items-center justify-center text-[#0B0F17] group-hover:bg-[#0B0F17] group-hover:text-[#C5A059] transition-colors shrink-0">
+                  <Icon className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-[#0B0F17] group-hover:text-[#C5A059] transition-colors flex items-center gap-1">
+                    {card.label}
+                    <ArrowUpRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </h3>
+                  <p className="text-xs text-stone-500 mt-1 leading-relaxed">{card.desc}</p>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
       </div>
-
     </div>
   );
 }

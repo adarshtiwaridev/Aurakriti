@@ -143,10 +143,10 @@ export default function RegisterPage() {
             <motion.label
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className={`relative flex cursor-pointer rounded-xl border p-4 focus:outline-none ${
+              className={`relative flex cursor-pointer rounded-2xl border p-4 focus:outline-none transition-all ${
                 selectedRole === 'user'
-                  ? 'border-indigo-600 bg-indigo-50'
-                  : 'border-gray-300 bg-white'
+                  ? 'border-[#0B0F17] bg-[#FDFBF7] shadow-xs'
+                  : 'border-[#EAE6DF] bg-white hover:border-stone-300'
               }`}
             >
               <input
@@ -156,25 +156,23 @@ export default function RegisterPage() {
                 className="sr-only"
               />
               <div className="flex flex-col">
-                <span className={`block text-sm font-medium ${
-                  selectedRole === 'user' ? 'text-indigo-900' : 'text-gray-900'
+                <span className={`block text-xs font-bold uppercase tracking-wider ${
+                  selectedRole === 'user' ? 'text-[#0B0F17]' : 'text-stone-700'
                 }`}>
-                  Customer
+                  Private Client
                 </span>
-                <span className={`block text-sm ${
-                  selectedRole === 'user' ? 'text-indigo-700' : 'text-gray-500'
-                }`}>
-                  Buy products
+                <span className="block text-xs text-stone-500 mt-0.5">
+                  Shop & collect fine jewelry
                 </span>
               </div>
               {selectedRole === 'user' && (
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="absolute top-2 right-2"
+                  className="absolute top-3 right-3"
                 >
-                  <div className="h-4 w-4 bg-indigo-600 rounded-full flex items-center justify-center">
-                    <svg className="h-2 w-2 text-white" fill="currentColor" viewBox="0 0 8 8">
+                  <div className="h-4 w-4 bg-[#C5A059] rounded-full flex items-center justify-center">
+                    <svg className="h-2 w-2 text-[#0B0F17]" fill="currentColor" viewBox="0 0 8 8">
                       <circle cx="4" cy="4" r="3" />
                     </svg>
                   </div>
@@ -183,12 +181,12 @@ export default function RegisterPage() {
             </motion.label>
 
             <motion.label
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className={`relative flex cursor-pointer rounded-xl border p-4 focus:outline-none ${
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+              className={`relative flex cursor-pointer rounded-2xl border p-4 focus:outline-none transition-all ${
                 selectedRole === 'seller'
-                  ? 'border-indigo-600 bg-indigo-50'
-                  : 'border-gray-300 bg-white'
+                  ? 'border-[#0B0F17] bg-[#FDFBF7] shadow-xs'
+                  : 'border-[#EAE6DF] bg-white hover:border-stone-300'
               }`}
             >
               <input
@@ -198,25 +196,23 @@ export default function RegisterPage() {
                 className="sr-only"
               />
               <div className="flex flex-col">
-                <span className={`block text-sm font-medium ${
-                  selectedRole === 'seller' ? 'text-indigo-900' : 'text-gray-900'
+                <span className={`block text-xs font-bold uppercase tracking-wider ${
+                  selectedRole === 'seller' ? 'text-[#0B0F17]' : 'text-stone-700'
                 }`}>
-                  Seller
+                  Atelier Artisan
                 </span>
-                <span className={`block text-sm ${
-                  selectedRole === 'seller' ? 'text-indigo-700' : 'text-gray-500'
-                }`}>
-                  Sell products
+                <span className="block text-xs text-stone-500 mt-0.5">
+                  Sell handcrafted pieces
                 </span>
               </div>
               {selectedRole === 'seller' && (
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="absolute top-2 right-2"
+                  className="absolute top-3 right-3"
                 >
-                  <div className="h-4 w-4 bg-indigo-600 rounded-full flex items-center justify-center">
-                    <svg className="h-2 w-2 text-white" fill="currentColor" viewBox="0 0 8 8">
+                  <div className="h-4 w-4 bg-[#C5A059] rounded-full flex items-center justify-center">
+                    <svg className="h-2 w-2 text-[#0B0F17]" fill="currentColor" viewBox="0 0 8 8">
                       <circle cx="4" cy="4" r="3" />
                     </svg>
                   </div>

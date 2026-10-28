@@ -5,7 +5,6 @@ import User from '@/models/User';
 import * as faceDetection from '@mediapipe/face_detection';
 import * as faceMesh from '@mediapipe/face_mesh';
 import * as tf from '@tensorflow/tfjs';
-import { createCanvas } from 'canvas';
 
 const DEBUG_PREFIX = '[AR Face Detection API]';
 
