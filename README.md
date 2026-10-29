@@ -291,6 +291,13 @@ If SMTP variables are missing, email sending is skipped safely instead of crashi
 - Chatbot recommendation response
 - Notification polling and read states
 
+- Some Video and climps of websites
+- <img width="1535" height="700" alt="image" src="https://github.com/user-attachments/assets/46975c64-193d-47cf-8af3-1e7a14f788be" />
+<img width="1530" height="602" alt="image" src="https://github.com/user-attachments/assets/f532b13a-d7c3-4112-857a-9289d12f466b" />
+<img width="1535" height="687" alt="image" src="https://github.com/user-attachments/assets/68911389-4f4b-4c21-886b-142cbd63985d" />
+<img width="1532" height="688" alt="image" src="https://github.com/user-attachments/assets/3bca0ffb-c9f3-43ca-9336-69b79be9b562" />
+
+
 ## Branding
 
 Aurakriti is designed as a premium jewellery shopping experience with a luxury visual language, gold/ivory palette, and boutique-style product presentation.
